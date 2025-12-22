@@ -15,6 +15,9 @@ class PaperTradeService:
 
         realized_pnl = sum(t.realized_pnl or 0 for t in trades)
 
+        # Calculate total holdings value (sum of quantity * avg_price for all positions)
+        total_holdings_value = sum((p.quantity or 0) * (p.avg_price or 0) for p in positions)
+
         return {
             "cash_balance": round(portfolio.cash_balance, 2),
             "holdings": [
@@ -26,6 +29,7 @@ class PaperTradeService:
                 for p in positions
             ],
             "realized_pnl": round(realized_pnl, 2),
+            "total_holdings_value": round(total_holdings_value, 2),
             "trade_history": [
                 {
                     "time": t.executed_at,

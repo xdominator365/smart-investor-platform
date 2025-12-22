@@ -21,6 +21,23 @@ export default function PortfolioHoldingsTable({
     );
   }
 
+
+  // Calculate totals for Qty, Invested, Current Value, and P&L
+  let totalQty = 0;
+  let totalInvested = 0;
+  let totalCurrentValue = 0;
+  let totalPnL = 0;
+  holdings.forEach((h) => {
+    const currentPrice = prices[h.symbol] ?? h.avg_price;
+    const invested = h.quantity * h.avg_price;
+    const currentValue = h.quantity * currentPrice;
+    const pnl = currentValue - invested;
+    totalQty += h.quantity;
+    totalInvested += invested;
+    totalCurrentValue += currentValue;
+    totalPnL += pnl;
+  });
+
   return (
     <div className="col-span-1 md:col-span-2 rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-lg border border-slate-200 dark:border-slate-700">
       <h2 className="text-sm uppercase tracking-wide text-slate-500 mb-4">
@@ -69,6 +86,16 @@ export default function PortfolioHoldingsTable({
                 </tr>
               );
             })}
+            {/* Total row */}
+            <tr className="font-bold border-t dark:border-slate-700 bg-slate-100 dark:bg-slate-900">
+              <td className="py-2">Total</td>
+              <td>{totalQty}</td>
+              <td></td>
+              <td></td>
+              <td>₹ {totalInvested.toFixed(2)}</td>
+              <td>₹ {totalCurrentValue.toFixed(2)}</td>
+              <td className={totalPnL >= 0 ? "text-green-500" : "text-red-500"}>₹ {totalPnL.toFixed(2)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
