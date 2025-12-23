@@ -31,3 +31,6 @@ export const fetchPortfolio = () =>
 
 export const fetchMarketStatusAPI = () =>
   API.get("/market/status");
+
+export const fetchAutoTradeDecisions = (symbol: string) =>
+  API.get(`/auto-trade/decisions/${symbol}`);

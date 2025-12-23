@@ -8,6 +8,7 @@ import {
   paperSell,
   paperAutoTrade,
   fetchMarketStatusAPI,
+  fetchAutoTradeDecisions,
 } from "../api";
 
 import StockCard from "../components/StockCard";
@@ -15,6 +16,7 @@ import SignalCard from "../components/SignalCard";
 import PriceChart from "../components/Charts/PriceChart";
 import RsiChart from "../components/Charts/RsiChart";
 import PaperTradePanel from "../components/PaperTradePanel";
+import AutoTradeExplainability from "../components/AutoTradeExplainability";
 
 export default function StockDetail() {
   const { symbol } = useParams<{ symbol: string }>();
@@ -25,6 +27,7 @@ export default function StockDetail() {
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState("");
   const [marketOpen, setMarketOpen] = useState(false);
+  const [decisions, setDecisions] = useState<any[]>([]);
 
   // fetch market open/close status
   useEffect(() => {
@@ -39,6 +42,8 @@ export default function StockDetail() {
     fetchStock(symbol).then((res) => setStock(res.data));
     fetchSignal(symbol).then((res) => setSignal(res.data));
     fetchChartData(symbol).then((res) => setChartData(res.data));
+    fetchAutoTradeDecisions(symbol).then(res => setDecisions(res.data));
+    loadAutoTradeDecisions();
   }, [symbol]);
 
   if (!symbol) {
@@ -70,7 +75,15 @@ export default function StockDetail() {
     }
     const res = await paperAutoTrade(symbol);
     setMessage(res.data.action);
+    await loadAutoTradeDecisions();
   };
+
+  const loadAutoTradeDecisions = async () => {
+  if (!symbol) return;
+  const res = await fetchAutoTradeDecisions(symbol);
+  setDecisions(res.data);
+  };
+
 
   return (
     <main className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -96,6 +109,7 @@ export default function StockDetail() {
         message={message}
         marketOpen={marketOpen}
       />
+      <AutoTradeExplainability decisions={decisions} />
     </main>
   );
 }

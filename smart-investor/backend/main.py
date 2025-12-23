@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from models.position import Position
 
 from utils.market_hours import is_market_open
+from models.auto_trade_decision import AutoTradeDecision
 
 
 app = FastAPI(title="AI Investment Assistant MVP")
@@ -161,6 +162,19 @@ def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
         action = "AUTO SELL EXECUTED"
     
     print(f"[AUTO-TRADE] {symbol} | Signal={signal} | RSI={latest_rsi:.2f} | Action={action}")
+    
+    decision = AutoTradeDecision(
+    symbol=symbol,
+    signal=signal,
+    rsi=float(latest_rsi),
+    ma20=float(df.iloc[-1]["MA20"]),
+    ma50=float(df.iloc[-1]["MA50"]),
+    action=action,
+    reason=action  # you can refine reason text
+    )
+
+    db.add(decision)
+    db.commit()
 
     return {
         "signal": signal,
@@ -171,6 +185,30 @@ def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
             portfolio_id=1
         )
     }
+    
+# To fetch decision history for a symbol
+@app.get("/auto-trade/decisions/{symbol}")
+def get_auto_trade_decisions(symbol: str, db: Session = Depends(get_db)):
+    decisions = (
+        db.query(AutoTradeDecision)
+        .filter_by(symbol=symbol.upper())
+        .order_by(AutoTradeDecision.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    return [
+        {
+            "time": d.created_at,
+            "signal": d.signal,
+            "rsi": d.rsi,
+            "ma20": d.ma20,
+            "ma50": d.ma50,
+            "action": d.action,
+            "reason": d.reason
+        }
+        for d in decisions
+    ]
 
 @app.get("/chart/{symbol}")
 def chart_data(symbol: str):
