@@ -28,3 +28,6 @@ export const paperAutoTrade = (symbol: string) =>
 
 export const fetchPortfolio = () =>
   API.get(`/paper-trade/portfolio`);
+
+export const fetchMarketStatusAPI = () =>
+  API.get("/market/status");

@@ -1,7 +1,47 @@
+
 import { NavLink } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
+import { useEffect, useState } from "react";
+import { fetchMarketStatusAPI } from "../api";
 
 export default function Header() {
+  const [marketOpen, setMarketOpen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStatus = async () => {
+      try {
+        const res = await fetchMarketStatusAPI();
+        if (isMounted) setMarketOpen(res.data.market_open);
+      } catch (e) {
+        if (isMounted) setMarketOpen(null);
+      }
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 30000); // 30s
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Market status badge
+  const MarketStatusBadge = () => (
+    <span
+      className={`ml-4 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold shadow-sm select-none
+        ${marketOpen === null ? "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-300" :
+          marketOpen ? "bg-green-100 text-green-700 border border-green-300 dark:bg-green-900 dark:text-green-200" :
+          "bg-red-100 text-red-700 border border-red-300 dark:bg-red-900 dark:text-red-200"}
+      `}
+      title={marketOpen === null ? "Status unavailable" : marketOpen ? "Market is open" : "Market is closed"}
+    >
+      <span className={`inline-block w-2 h-2 rounded-full mr-1
+        ${marketOpen === null ? "bg-gray-400" : marketOpen ? "bg-green-500" : "bg-red-500"}
+      `} />
+      {marketOpen === null ? "Status..." : marketOpen ? "Market Open" : "Market Closed"}
+    </span>
+  );
+
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-slate-300 dark:border-slate-700">
 
@@ -57,6 +97,7 @@ export default function Header() {
           </span>
         </NavLink>
       {/* Light/Dark mode toggle */}
+      <MarketStatusBadge />
       <ThemeToggle />
       </nav>
     </header>

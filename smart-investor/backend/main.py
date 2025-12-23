@@ -10,6 +10,8 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from models.position import Position
 
+from utils.market_hours import is_market_open
+
 
 app = FastAPI(title="AI Investment Assistant MVP")
 
@@ -24,10 +26,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/market/status")
+def market_status():
+    return {
+        "market_open": is_market_open(),
+        "timezone": "Asia/Kolkata"
+    }
+
 @app.get("/")
 def home():
     return {
-        "app": "AI Investment Assistant MVP",
+        "app": "MY DHIRA - Data-driven Holistic Intelligent Risk-Aware Algorithms",
         "status": "running"
     }
 
@@ -87,6 +96,13 @@ def paper_sell(symbol: str, quantity: int, db: Session = Depends(get_db)):
 
 @app.post("/paper-trade/auto/{symbol}")
 def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
+    
+    # Check market hours
+    if not is_market_open():
+        return {
+            "signal": "N/A",
+            "action": "MARKET CLOSED – AUTO TRADE SKIPPED"
+        }
     
     symbol = symbol.upper()
     

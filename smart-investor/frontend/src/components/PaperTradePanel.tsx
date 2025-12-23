@@ -5,6 +5,7 @@ interface PaperTradePanelProps {
   onSell: () => void;
   onAutoTrade: () => void;
   message: string;
+  marketOpen: boolean;
 }
 
 export default function PaperTradePanel({
