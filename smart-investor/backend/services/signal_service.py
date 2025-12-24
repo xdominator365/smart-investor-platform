@@ -5,6 +5,13 @@ class SignalService:
 
     @staticmethod
     def generate_signal(df: pd.DataFrame) -> dict:
+        
+        required_cols = {"MA20", "MA50", "RSI"}
+        missing = required_cols - set(df.columns)
+
+        if missing:
+            raise ValueError(f"Missing indicators: {missing}")
+
         latest = df.iloc[-1]
 
         if pd.isna(latest["MA20"]) or pd.isna(latest["MA50"]) or pd.isna(latest["RSI"]):

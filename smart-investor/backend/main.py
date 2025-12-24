@@ -3,6 +3,7 @@ from services.market_data_service import MarketDataService
 from services.indicator_service import IndicatorService
 from services.signal_service import SignalService
 from services.paper_trade_service import PaperTradeService
+from services.decision_context_service import DecisionContextService
 from fastapi.middleware.cors import CORSMiddleware
 
 from deps import get_db
@@ -72,84 +73,89 @@ def signal(symbol: str):
 
 @app.post("/paper-trade/buy")
 def paper_buy(symbol: str, quantity: int, db: Session = Depends(get_db)):
+    context = DecisionContextService.build(symbol)
+
+    if not context["rules"]["rules_passed"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Trade blocked by rules: {context['rules']['blocked_by']}"
+        )
+
     stock = MarketDataService.get_latest_stock_data(symbol)
+
     PaperTradeService.buy(
-        db,
+        db=db,
         portfolio_id=1,
         symbol=symbol.upper(),
         price=stock["current_price"],
         quantity=quantity
     )
+
     return {"message": "BUY executed"}
 
 
 @app.post("/paper-trade/sell")
 def paper_sell(symbol: str, quantity: int, db: Session = Depends(get_db)):
+    context = DecisionContextService.build(symbol)
+
+    if not context["rules"]["rules_passed"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Trade blocked by rules: {context['rules']['blocked_by']}"
+        )
+
     stock = MarketDataService.get_latest_stock_data(symbol)
+
     PaperTradeService.sell(
-        db,
+        db=db,
         portfolio_id=1,
         symbol=symbol.upper(),
         price=stock["current_price"],
         quantity=quantity
     )
+
     return {"message": "SELL executed"}
 
 @app.post("/paper-trade/auto/{symbol}")
 def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
-    
-    # Check market hours
+
     if not is_market_open():
-        return {
-            "signal": "N/A",
-            "action": "MARKET CLOSED – AUTO TRADE SKIPPED"
-        }
-    
+        return {"action": "MARKET CLOSED"}
+
     symbol = symbol.upper()
-    
-    # 1️⃣ Get signal
-    df = MarketDataService.get_historical_data(symbol)
-    df = IndicatorService.add_moving_averages(df)
-    df = IndicatorService.add_rsi(df)
+
+    context = DecisionContextService.build(symbol)
+    df = context["df"]
+    rules = context["rules"]
+    features = context["features"]
 
     signal_data = SignalService.generate_signal(df)
     signal = signal_data["signal"]
 
-    # 2️⃣ Get latest price
     stock = MarketDataService.get_latest_stock_data(symbol)
     price = stock["current_price"]
 
-    # 3️⃣ Get current position from DB
-    position = (
-        db.query(Position)
-        .filter_by(portfolio_id=1, symbol=symbol)
-        .first()
-    )
+    position = db.query(Position).filter_by(
+        portfolio_id=1, symbol=symbol
+    ).first()
 
     current_qty = position.quantity if position else 0
-    latest_rsi = df.iloc[-1]["RSI"]
-
-    MAX_QTY_PER_SYMBOL = 10
     action = "NO ACTION"
 
-    # 4️⃣ AUTO BUY LOGIC
-    if signal == "BUY":
-        if current_qty + quantity > MAX_QTY_PER_SYMBOL:
-            action = "BUY BLOCKED (Max quantity reached)"
-        elif latest_rsi >= 65:
-            action = "BUY BLOCKED (RSI too high)"
-        else:
-            PaperTradeService.buy(
-                db=db,
-                portfolio_id=1,
-                symbol=symbol,
-                price=price,
-                quantity=quantity,
-                strategy="auto"
-            )
-            action = "AUTO BUY EXECUTED"
+    if not rules["rules_passed"]:
+        action = f"BLOCKED BY RULES: {rules['blocked_by']}"
 
-    # 5️⃣ AUTO SELL LOGIC
+    elif signal == "BUY":
+        PaperTradeService.buy(
+            db=db,
+            portfolio_id=1,
+            symbol=symbol,
+            price=price,
+            quantity=quantity,
+            strategy="auto"
+        )
+        action = "AUTO BUY EXECUTED"
+
     elif signal == "SELL" and current_qty > 0:
         PaperTradeService.sell(
             db=db,
@@ -160,17 +166,15 @@ def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
             strategy="auto"
         )
         action = "AUTO SELL EXECUTED"
-    
-    print(f"[AUTO-TRADE] {symbol} | Signal={signal} | RSI={latest_rsi:.2f} | Action={action}")
-    
+
     decision = AutoTradeDecision(
-    symbol=symbol,
-    signal=signal,
-    rsi=float(latest_rsi),
-    ma20=float(df.iloc[-1]["MA20"]),
-    ma50=float(df.iloc[-1]["MA50"]),
-    action=action,
-    reason=action  # you can refine reason text
+        symbol=symbol,
+        signal=signal,
+        rsi=features["rsi_14"],
+        ma20=features["ma20"],
+        ma50=features["ma50"],
+        action=action,
+        reason=action
     )
 
     db.add(decision)
@@ -179,11 +183,7 @@ def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
     return {
         "signal": signal,
         "action": action,
-        "price": price,
-        "portfolio": PaperTradeService.get_portfolio(
-            db=db,
-            portfolio_id=1
-        )
+        "rules": rules
     }
     
 # To fetch decision history for a symbol
