@@ -73,13 +73,14 @@ def signal(symbol: str):
 
 @app.post("/paper-trade/buy")
 def paper_buy(symbol: str, quantity: int, db: Session = Depends(get_db)):
-    context = DecisionContextService.build(symbol)
+    context = DecisionContextService.build(symbol, db=db)
 
-    if not context["rules"]["rules_passed"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Trade blocked by rules: {context['rules']['blocked_by']}"
-        )
+    rules = context["rules"]
+    warnings = None
+
+    if not rules["rules_passed"]:
+        warnings = f"Trade executed with rule warnings: {rules['blocked_by']}"
+
 
     stock = MarketDataService.get_latest_stock_data(symbol)
 
@@ -91,18 +92,19 @@ def paper_buy(symbol: str, quantity: int, db: Session = Depends(get_db)):
         quantity=quantity
     )
 
-    return {"message": "BUY executed"}
+    return {"message": "BUY executed", "rules": rules, "warnings": warnings}
 
 
 @app.post("/paper-trade/sell")
 def paper_sell(symbol: str, quantity: int, db: Session = Depends(get_db)):
-    context = DecisionContextService.build(symbol)
+    context = DecisionContextService.build(symbol, db=db)
 
-    if not context["rules"]["rules_passed"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Trade blocked by rules: {context['rules']['blocked_by']}"
-        )
+    rules = context["rules"]
+    warnings = None
+
+    if not rules["rules_passed"]:
+        warnings = f"Trade executed with rule warnings: {rules['blocked_by']}"
+
 
     stock = MarketDataService.get_latest_stock_data(symbol)
 
@@ -114,7 +116,7 @@ def paper_sell(symbol: str, quantity: int, db: Session = Depends(get_db)):
         quantity=quantity
     )
 
-    return {"message": "SELL executed"}
+    return {"message": "SELL executed", "rules": rules, "warnings": warnings}
 
 @app.post("/paper-trade/auto/{symbol}")
 def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
@@ -123,11 +125,12 @@ def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
         return {"action": "MARKET CLOSED"}
 
     symbol = symbol.upper()
-
-    context = DecisionContextService.build(symbol)
-    df = context["df"]
-    rules = context["rules"]
+    
+    context = DecisionContextService.build(symbol, db=db)
     features = context["features"]
+    rules = context["rules"]
+    df = context["df"]
+    snapshot = context["snapshot"]
 
     signal_data = SignalService.generate_signal(df)
     signal = signal_data["signal"]
