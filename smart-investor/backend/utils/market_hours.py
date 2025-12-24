@@ -16,5 +16,5 @@ def is_market_open(now: datetime | None = None) -> bool:
     if now.weekday() >= 5:
         return False
 
-    # return MARKET_OPEN <= current_time <= MARKET_CLOSE
-    return True
+    return MARKET_OPEN <= current_time <= MARKET_CLOSE
+    # return True
