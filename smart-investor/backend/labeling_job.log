@@ -1,0 +1,57 @@
+2025-12-26 01:14:53.396705 | Job started
+2025-12-26 01:14:53.397553 | Market open, skipping labeling
+2025-12-26 01:15:44.736971 | Job started
+2025-12-26 01:15:49.097004 | Labeling completed successfully
+2025-12-26 01:15:49.098121 | DB connection closed
+2025-12-26 01:25:22.968436 | Job started
+2025-12-26 01:25:23.481671 | DB connection closed
+2025-12-26 01:28:30.222401 | Job started
+2025-12-26 01:28:33.312682 | Labeling completed successfully
+2025-12-26 01:28:33.314228 | DB connection closed
+2025-12-26 01:29:10.595798 | Job started
+2025-12-26 01:29:13.109632 | Labeling completed successfully
+2025-12-26 01:29:13.116528 | DB connection closed
+2025-12-26 12:04:36.615857 | Job started
+2025-12-26 12:04:36.616627 | Market open, skipping labeling
+2025-12-26 15:48:24.427682 | Job started
+2025-12-26 15:48:25.792940 | ERROR: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.InvalidSchemaName) schema "np" does not exist
+LINE 1: ..., outcome_label, confidence_score) VALUES (1, 60, np.float64...
+                                                             ^
+
+[SQL: INSERT INTO ml_outcomes (snapshot_id, horizon_minutes, future_return, max_favorable_move, max_adverse_move, outcome_label, confidence_score) VALUES (%(snapshot_id)s, %(horizon_minutes)s, %(future_return)s, %(max_favorable_move)s, %(max_adverse_move)s, %(outcome_label)s, %(confidence_score)s) RETURNING ml_outcomes.id, ml_outcomes.evaluated_at]
+[parameters: {'snapshot_id': 1, 'horizon_minutes': 60, 'future_return': np.float64(-0.016072803361617625), 'max_favorable_move': np.float64(0.0036673599109522835), 'max_adverse_move': np.float64(-0.01772531498584864), 'outcome_label': 'FAILURE', 'confidence_score': 1.0}]
+(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+2025-12-26 15:48:25.794126 | DB connection closed
+2025-12-27 00:34:24.842193 | Job started
+2025-12-27 00:34:26.364048 | ERROR: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.InvalidSchemaName) schema "np" does not exist
+LINE 1: ..., outcome_label, confidence_score) VALUES (1, 60, np.float64...
+                                                             ^
+
+[SQL: INSERT INTO ml_outcomes (snapshot_id, horizon_minutes, future_return, max_favorable_move, max_adverse_move, outcome_label, confidence_score) VALUES (%(snapshot_id)s, %(horizon_minutes)s, %(future_return)s, %(max_favorable_move)s, %(max_adverse_move)s, %(outcome_label)s, %(confidence_score)s) RETURNING ml_outcomes.id, ml_outcomes.evaluated_at]
+[parameters: {'snapshot_id': 1, 'horizon_minutes': 60, 'future_return': np.float64(-0.016072803361617625), 'max_favorable_move': np.float64(0.0036673599109522835), 'max_adverse_move': np.float64(-0.01772531498584864), 'outcome_label': 'FAILURE', 'confidence_score': 1.0}]
+(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+2025-12-27 00:34:26.365047 | DB connection closed
+2025-12-27 00:41:31.991698 | Job started
+2025-12-27 00:41:33.007050 | ERROR: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.InvalidSchemaName) schema "np" does not exist
+LINE 1: ..., outcome_label, confidence_score) VALUES (1, 60, np.float64...
+                                                             ^
+
+[SQL: INSERT INTO ml_outcomes (snapshot_id, horizon_minutes, future_return, max_favorable_move, max_adverse_move, outcome_label, confidence_score) VALUES (%(snapshot_id)s, %(horizon_minutes)s, %(future_return)s, %(max_favorable_move)s, %(max_adverse_move)s, %(outcome_label)s, %(confidence_score)s) RETURNING ml_outcomes.id, ml_outcomes.evaluated_at]
+[parameters: {'snapshot_id': 1, 'horizon_minutes': 60, 'future_return': np.float64(-0.016072803361617625), 'max_favorable_move': np.float64(0.0036673599109522835), 'max_adverse_move': np.float64(-0.01772531498584864), 'outcome_label': 'FAILURE', 'confidence_score': 1.0}]
+(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+2025-12-27 00:41:33.007050 | DB connection closed
+2025-12-27 00:42:42.438315 | Job started
+2025-12-27 00:42:43.318900 | ERROR: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (psycopg2.errors.InvalidSchemaName) schema "np" does not exist
+LINE 1: ..., outcome_label, confidence_score) VALUES (1, 60, np.float64...
+                                                             ^
+
+[SQL: INSERT INTO ml_outcomes (snapshot_id, horizon_minutes, future_return, max_favorable_move, max_adverse_move, outcome_label, confidence_score) VALUES (%(snapshot_id)s, %(horizon_minutes)s, %(future_return)s, %(max_favorable_move)s, %(max_adverse_move)s, %(outcome_label)s, %(confidence_score)s) RETURNING ml_outcomes.id, ml_outcomes.evaluated_at]
+[parameters: {'snapshot_id': 1, 'horizon_minutes': 60, 'future_return': np.float64(-0.016072803361617625), 'max_favorable_move': np.float64(0.0036673599109522835), 'max_adverse_move': np.float64(-0.01772531498584864), 'outcome_label': 'FAILURE', 'confidence_score': 1.0}]
+(Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+2025-12-27 00:42:43.319897 | DB connection closed
+2025-12-27 01:31:18.135077 | Job started
+2025-12-27 01:31:20.355849 | Labeling completed successfully
+2025-12-27 01:31:20.355849 | DB connection closed
+2025-12-27 01:33:21.946384 | Job started
+2025-12-27 01:33:24.115564 | Labeling completed successfully
+2025-12-27 01:33:24.116561 | DB connection closed
