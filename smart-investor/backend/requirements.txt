@@ -5,6 +5,7 @@ sqlalchemy
 psycopg2-binary
 alembic 
 python-dotenv
+textblob
 
 # sqlalchemy → ORM
 # psycopg2-binary → PostgreSQL driver

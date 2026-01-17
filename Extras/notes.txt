@@ -1,0 +1,11 @@
+DEV WORK COMMANDS 
+-----------------
+
+NOTE: BEFORE RUNNING THIS MAKE SURE YOU ADDED IT IN backend/models/__init__.py
+
+alembic revision --autogenerate -m "add table"
+alembic upgrade head
+
+
+psql -h localhost -U smartinvestor -d smartinvestor_db
+

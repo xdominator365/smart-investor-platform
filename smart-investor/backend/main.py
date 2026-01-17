@@ -14,6 +14,8 @@ from models.position import Position
 from utils.market_hours import is_market_open
 from models.auto_trade_decision import AutoTradeDecision
 
+from services.news_service import NewsService
+
 
 app = FastAPI(title="AI Investment Assistant MVP")
 
@@ -51,7 +53,7 @@ def stock(symbol: str):
 
 
 @app.get("/signal/{symbol}")
-def signal(symbol: str):
+def signal(symbol: str, db: Session = Depends(get_db)):
     if not symbol or len(symbol) < 2:
         raise HTTPException(status_code=400, detail="Invalid stock symbol")
 
@@ -60,6 +62,7 @@ def signal(symbol: str):
     df = IndicatorService.add_rsi(df)
 
     signal_data = SignalService.generate_signal(df)
+    news_insights = NewsService.build_insight(db, symbol)
     latest = df.iloc[-1]
 
     return {
@@ -68,7 +71,8 @@ def signal(symbol: str):
         "ma_20": round(latest["MA20"], 2),
         "ma_50": round(latest["MA50"], 2),
         "rsi": round(latest["RSI"], 2),
-        **signal_data
+        **signal_data,
+        "news_insights": news_insights
     }
 
 @app.post("/paper-trade/buy")
@@ -235,3 +239,13 @@ def chart_data(symbol: str):
 @app.get("/paper-trade/portfolio")
 def portfolio(db: Session = Depends(get_db)):
     return PaperTradeService.get_portfolio(db, portfolio_id=1)
+
+# NEWS INGESTION AND SENTIMENT ANALYSIS ENDPOINTS
+
+@app.post("/news/ingest/{symbol}")
+def ingest_news(symbol: str, db: Session = Depends(get_db)):
+    return NewsService.ingest_news(db, symbol)
+
+@app.get("/news/insights/{symbol}")
+def news_insights(symbol: str, db: Session = Depends(get_db)):
+    return NewsService.build_insight(db, symbol)
