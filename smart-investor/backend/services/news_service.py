@@ -150,6 +150,12 @@ class NewsService:
 
         news_24h = fetch(24)
         news_7d = fetch(24 * 7)
+        
+        latest_event_time = None
+        all_news = news_24h + news_7d
+
+        if all_news:
+            latest_event_time = max(n.event_time for n in all_news)
 
         if not news_24h and not news_7d:
             return {
@@ -169,7 +175,8 @@ class NewsService:
             "avg_sentiment_7d": avg_7d,
             "sentiment_trend": avg_24h - avg_7d,
             "news_volume_24h": len(news_24h),
-            "news_volume_7d": len(news_7d)
+            "news_volume_7d": len(news_7d),
+            "last_updated_at": latest_event_time.isoformat() if latest_event_time else None
         }
 
     # ---------------------------
@@ -203,6 +210,7 @@ class NewsService:
         return {
             "symbol": symbol.upper(),
             "market_scope": "GLOBAL",
+            "last_updated_at": data.get("last_updated_at"),
             "sentiment": {
                 "avg_24h": round(data["avg_sentiment_24h"], 3),
                 "avg_7d": round(data["avg_sentiment_7d"], 3),
