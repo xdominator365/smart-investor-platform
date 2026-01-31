@@ -9,3 +9,8 @@ alembic upgrade head
 
 psql -h localhost -U smartinvestor -d smartinvestor_db
 
+
+### FOR VALID TICKERS: ###
+Look here:
+branch: https://github.com/ahnazary/Finance/tree/masterhttps://github.com/ahnazary/Finance/tree/master
+raw view: https://raw.githubusercontent.com/ahnazary/Finance/refs/heads/master/finance/src/database/valid_tickers.csv

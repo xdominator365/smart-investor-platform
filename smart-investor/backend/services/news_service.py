@@ -181,6 +181,10 @@ class NewsService:
         """
         High-level interpretation for humans & ML.
         """
+        
+        # Auto-ingest on first request or stale data
+        NewsService.ensure_news_ingested(db, symbol)
+        
         data = NewsService.aggregate_sentiment(db, symbol)
 
         if data["status"] != "OK":
@@ -247,3 +251,32 @@ class NewsService:
             risk = "NEGATIVE_NEWS_SPIKE"
 
         return final_score, boost, risk
+    
+    def _is_news_stale(db, symbol: str, ttl_minutes: int = 60) -> bool:
+        """
+        Returns True if no news exists or latest news is older than TTL.
+        """
+        latest = (
+            db.query(NewsEvent)
+            .filter(NewsEvent.symbol == symbol.upper())
+            .order_by(NewsEvent.event_time.desc())
+            .first()
+        )
+
+        if not latest:
+            return True
+
+        age = datetime.utcnow() - latest.event_time
+        return age > timedelta(minutes=ttl_minutes)
+    
+    @staticmethod
+    def ensure_news_ingested(db, symbol: str, country: str | None = None):
+        """
+        Ensures news exists in DB for a symbol.
+        Ingests only if missing or stale.
+        """
+        if NewsService._is_news_stale(db, symbol):
+            print(f"[NEWS] Ingesting fresh news for {symbol}")
+            NewsService.ingest_news(db, symbol, country)
+        else:
+            print(f"[NEWS] Using cached news for {symbol}")

@@ -9,6 +9,7 @@ import {
   paperAutoTrade,
   fetchMarketStatusAPI,
   fetchAutoTradeDecisions,
+  fetchNewsInsights,
 } from "../api";
 
 import StockCard from "../components/StockCard";
@@ -16,7 +17,9 @@ import SignalCard from "../components/SignalCard";
 import PriceChart from "../components/Charts/PriceChart";
 import RsiChart from "../components/Charts/RsiChart";
 import PaperTradePanel from "../components/PaperTradePanel";
-import AutoTradeExplainability from "../components/AutoTradeExplainability";
+import AutoTradeExplainability from "../components/AutoTradeExplainability"
+import NewsInsightCard from "../components/NewsInsightsCard";
+
 
 export default function StockDetail() {
   const { symbol } = useParams<{ symbol: string }>();
@@ -28,6 +31,7 @@ export default function StockDetail() {
   const [message, setMessage] = useState("");
   const [marketOpen, setMarketOpen] = useState(false);
   const [decisions, setDecisions] = useState<any[]>([]);
+  const [newsInsights, setNewsInsights] = useState<any>(null);
 
   // fetch market open/close status
   useEffect(() => {
@@ -44,6 +48,12 @@ export default function StockDetail() {
     fetchChartData(symbol).then((res) => setChartData(res.data));
     fetchAutoTradeDecisions(symbol).then(res => setDecisions(res.data));
     loadAutoTradeDecisions();
+
+    // NEW: fetch news insights
+    fetchNewsInsights(symbol)
+    .then(res => setNewsInsights(res.data))
+    .catch(() => setNewsInsights(null));
+
   }, [symbol]);
 
   if (!symbol) {
@@ -97,6 +107,9 @@ export default function StockDetail() {
         />
       )}
 
+      {/*NEW: News Insights */}
+      <NewsInsightCard insight={newsInsights} />
+  
       <PriceChart data={chartData} />
       <RsiChart data={chartData} />
 
