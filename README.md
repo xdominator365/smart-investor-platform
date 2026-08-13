@@ -1,4 +1,4 @@
-# 🧭 Architecture Overview – My DHIRA  
+# 🧭 Architecture Overview – DHIRA  
 ### *Data-driven Holistic Intelligent Risk-Aware Algorithms*
 
 This document provides a detailed overview of the **system architecture** for the Smart Investor Platform.  
