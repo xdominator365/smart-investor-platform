@@ -96,7 +96,7 @@ export default function StockDetail() {
 
 
   return (
-    <main className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <main className="w-full max-w-full min-w-0 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
       {stock && <StockCard price={stock.current_price} symbol={symbol} />}
 
       {signal && (
