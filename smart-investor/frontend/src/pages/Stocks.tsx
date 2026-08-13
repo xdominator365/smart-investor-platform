@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 export default function Stocks() {
   const [symbol, setSymbol] = useState("");
-  const navigate = useNavigate();
 
   const handleSearch = () => {
     if (!symbol.trim()) return;
