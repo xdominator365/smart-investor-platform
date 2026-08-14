@@ -7,6 +7,30 @@ const API = axios.create({
   baseURL: API_URL,
 });
 
+const GUEST_ID_KEY = "dhira_guest_id";
+
+export const getGuestId = (): string => {
+  const existingGuestId = localStorage.getItem(GUEST_ID_KEY);
+
+  if (existingGuestId) {
+    return existingGuestId;
+  }
+
+  const newGuestId = crypto.randomUUID();
+
+  localStorage.setItem(GUEST_ID_KEY, newGuestId);
+
+  return newGuestId;
+};
+
+export const createSession = () => {
+  const guestId = getGuestId();
+
+  return API.post("/session", {
+    guest_id: guestId,
+  });
+};
+
 export const fetchStock = (symbol: string) =>
   API.get(`/stock/${symbol}`);
 

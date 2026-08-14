@@ -1,3 +1,7 @@
+from pydantic import BaseModel
+from models.user import User
+from models.portfolio import Portfolio
+
 from fastapi import FastAPI, HTTPException
 from services.market_data_service import MarketDataService
 from services.indicator_service import IndicatorService
@@ -30,6 +34,68 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class SessionRequest(BaseModel):
+    guest_id: str
+
+@app.post("/session")
+def create_session(
+    request: SessionRequest,
+    db: Session = Depends(get_db)
+):
+    guest_id = request.guest_id.strip()
+
+    if not guest_id:
+        raise HTTPException(
+            status_code=400,
+            detail="guest_id is required"
+        )
+
+    # 1. Find existing guest user
+    user = (
+        db.query(User)
+        .filter(User.guest_id == guest_id)
+        .first()
+    )
+
+    # 2. Create user if this is a new visitor
+    if not user:
+        user = User(
+            guest_id=guest_id,
+            email=None,
+            name="Guest User"
+        )
+
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    # 3. Find this user's portfolio
+    portfolio = (
+        db.query(Portfolio)
+        .filter(Portfolio.user_id == user.id)
+        .first()
+    )
+
+    # 4. Create fresh paper portfolio only once
+    if not portfolio:
+        portfolio = Portfolio(
+            user_id=user.id,
+            name="Paper Portfolio",
+            cash_balance=100000.0
+        )
+
+        db.add(portfolio)
+        db.commit()
+        db.refresh(portfolio)
+
+    return {
+        "user_id": user.id,
+        "guest_id": user.guest_id,
+        "portfolio_id": portfolio.id,
+        "cash_balance": portfolio.cash_balance
+    }
+
 
 @app.get("/market/status")
 def market_status():
