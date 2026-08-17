@@ -1,7 +1,10 @@
 import axios from "axios";
 
-// Support both local development and cloud production
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+// Local development → FastAPI directly
+// Production → Vercel proxies /api requests to Render
+const API_URL = import.meta.env.DEV
+  ? import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
+  : "/api";
 
 const API = axios.create({
   baseURL: API_URL,
