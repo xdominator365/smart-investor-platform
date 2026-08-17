@@ -26,6 +26,12 @@ export const getGuestId = (): string => {
   return newGuestId;
 };
 
+// Automatically send the guest ID with every API request
+API.interceptors.request.use((config) => {
+  config.headers["X-Guest-ID"] = getGuestId();
+  return config;
+});
+
 export const createSession = () => {
   const guestId = getGuestId();
 
@@ -66,4 +72,4 @@ export const fetchAutoTradeDecisions = (symbol: string) =>
   API.get(`/auto-trade/decisions/${symbol}`);
 
 export const fetchNewsInsights = (symbol: string) =>
-  API.get(`/news/insights/${symbol}`);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+  API.get(`/news/insights/${symbol}`);

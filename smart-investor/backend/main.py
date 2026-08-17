@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from models.user import User
 from models.portfolio import Portfolio
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from services.market_data_service import MarketDataService
 from services.indicator_service import IndicatorService
 from services.signal_service import SignalService
@@ -32,7 +32,10 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=[
+        "Content-Type",
+        "X-Guest-ID"
+    ],
 )
 
 class SessionRequest(BaseModel):
@@ -96,6 +99,41 @@ def create_session(
         "cash_balance": portfolio.cash_balance
     }
 
+def get_guest_portfolio(
+    db: Session,
+    x_guest_id: str | None = Header(default=None)
+):
+    if not x_guest_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-Guest-ID header is required"
+        )
+
+    user = (
+        db.query(User)
+        .filter(User.guest_id == x_guest_id.strip())
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Guest session not found"
+        )
+
+    portfolio = (
+        db.query(Portfolio)
+        .filter(Portfolio.user_id == user.id)
+        .first()
+    )
+
+    if not portfolio:
+        raise HTTPException(
+            status_code=404,
+            detail="Portfolio not found"
+        )
+
+    return portfolio
 
 @app.get("/market/status")
 def market_status():
@@ -143,7 +181,14 @@ def signal(symbol: str, db: Session = Depends(get_db)):
     }
 
 @app.post("/paper-trade/buy")
-def paper_buy(symbol: str, quantity: int, db: Session = Depends(get_db)):
+def paper_buy(
+    symbol: str,
+    quantity: int,
+    x_guest_id: str | None = Header(default=None),
+    db: Session = Depends(get_db)
+):
+    portfolio = get_guest_portfolio(db, x_guest_id)
+
     context = DecisionContextService.build(symbol, db=db)
 
     rules = context["rules"]
@@ -152,22 +197,31 @@ def paper_buy(symbol: str, quantity: int, db: Session = Depends(get_db)):
     if not rules["rules_passed"]:
         warnings = f"Trade executed with rule warnings: {rules['blocked_by']}"
 
-
     stock = MarketDataService.get_latest_stock_data(symbol)
 
     PaperTradeService.buy(
         db=db,
-        portfolio_id=1,
+        portfolio_id=portfolio.id,
         symbol=symbol.upper(),
         price=stock["current_price"],
         quantity=quantity
     )
 
-    return {"message": "BUY executed", "rules": rules, "warnings": warnings}
-
+    return {
+        "message": "BUY executed",
+        "portfolio_id": portfolio.id,
+        "rules": rules,
+        "warnings": warnings
+    }
 
 @app.post("/paper-trade/sell")
-def paper_sell(symbol: str, quantity: int, db: Session = Depends(get_db)):
+def paper_sell(
+    symbol: str,
+    quantity: int,
+    x_guest_id: str | None = Header(default=None),
+    db: Session = Depends(get_db)
+):
+    portfolio = get_guest_portfolio(db, x_guest_id)
     context = DecisionContextService.build(symbol, db=db)
 
     rules = context["rules"]
@@ -181,7 +235,7 @@ def paper_sell(symbol: str, quantity: int, db: Session = Depends(get_db)):
 
     PaperTradeService.sell(
         db=db,
-        portfolio_id=1,
+        portfolio_id=portfolio.id,
         symbol=symbol.upper(),
         price=stock["current_price"],
         quantity=quantity
@@ -190,7 +244,19 @@ def paper_sell(symbol: str, quantity: int, db: Session = Depends(get_db)):
     return {"message": "SELL executed", "rules": rules, "warnings": warnings}
 
 @app.post("/paper-trade/auto/{symbol}")
-def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
+def auto_trade(
+    symbol: str,
+    quantity: int = 1,
+    x_guest_id: str | None = Header(default=None),
+    db: Session = Depends(get_db)
+):
+
+    portfolio = get_guest_portfolio(db, x_guest_id)
+
+    if not is_market_open():
+        return {"action": "MARKET CLOSED"}
+
+    symbol = symbol.upper()
 
     if not is_market_open():
         return {"action": "MARKET CLOSED"}
@@ -210,7 +276,7 @@ def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
     price = stock["current_price"]
 
     position = db.query(Position).filter_by(
-        portfolio_id=1, symbol=symbol
+        portfolio_id=portfolio.id, symbol=symbol
     ).first()
 
     current_qty = position.quantity if position else 0
@@ -222,7 +288,7 @@ def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
     elif signal == "BUY":
         PaperTradeService.buy(
             db=db,
-            portfolio_id=1,
+            portfolio_id=portfolio.id,
             symbol=symbol,
             price=price,
             quantity=quantity,
@@ -233,7 +299,7 @@ def auto_trade(symbol: str, quantity: int = 1, db: Session = Depends(get_db)):
     elif signal == "SELL" and current_qty > 0:
         PaperTradeService.sell(
             db=db,
-            portfolio_id=1,
+            portfolio_id=portfolio.id,
             symbol=symbol,
             price=price,
             quantity=current_qty,
@@ -304,8 +370,16 @@ def chart_data(symbol: str):
     ]
 
 @app.get("/paper-trade/portfolio")
-def portfolio(db: Session = Depends(get_db)):
-    return PaperTradeService.get_portfolio(db, portfolio_id=1)
+def portfolio(
+    x_guest_id: str | None = Header(default=None),
+    db: Session = Depends(get_db)
+):
+    guest_portfolio = get_guest_portfolio(db, x_guest_id)
+
+    return PaperTradeService.get_portfolio(
+        db,
+        portfolio_id=guest_portfolio.id
+    )
 
 # NEWS INGESTION AND SENTIMENT ANALYSIS ENDPOINTS
 
