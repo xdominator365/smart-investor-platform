@@ -11,7 +11,12 @@ import TradeHistoryTable from "../components/TradeHistoryTable";
 
 export default function Dashboard() {
   const [portfolio, setPortfolio] = useState<any>(null);
-  const [prices, setPrices] = useState<Record<string, number>>({});
+  const [prices, setPrices] = useState<Record<string, {
+    current_price: number;
+    return_1d: number;
+    return_5d: number;
+    return_30d: number;
+  }>>({});
   const [marketOpen, setMarketOpen] = useState(false);
 
   // Load portfolio on initial render
@@ -44,16 +49,29 @@ export default function Dashboard() {
     const results = await Promise.all(
       symbols.map((symbol) =>
         fetchStock(symbol)
-          .then((res) => [symbol, res.data.current_price] as [string, number])
+          .then((res) => [symbol, res.data] as [string, any])
           .catch(() => [symbol, null])
       )
     );
 
     if (cancelledRef.current) return;
 
-    const priceMap: Record<string, number> = {};
-    results.forEach(([symbol, price]) => {
-      if (typeof price === "number") priceMap[symbol] = price;
+    const priceMap: Record<string, {
+      current_price: number;
+      return_1d: number;
+      return_5d: number;
+      return_30d: number;
+    }> = {};
+
+    results.forEach(([symbol, stockData]) => {
+      if (stockData && typeof stockData.current_price === "number") {
+        priceMap[symbol] = {
+          current_price: stockData.current_price,
+          return_1d: Number(stockData.return_1d ?? 0),
+          return_5d: Number(stockData.return_5d ?? 0),
+          return_30d: Number(stockData.return_30d ?? 0),
+        };
+      }
     });
 
     setPrices(priceMap);
