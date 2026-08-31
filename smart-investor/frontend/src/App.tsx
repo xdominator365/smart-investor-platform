@@ -7,13 +7,17 @@ import StockDetail from "./pages/StockDetail";
 export default function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-950">
-        <Header />
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/stocks" element={<Stocks />} />
-          <Route path="/stocks/:symbol" element={<StockDetail />} />
-        </Routes>
+      <div className="min-h-screen">
+        <div className="mx-auto max-w-[1600px] px-4 pb-10 pt-4 md:px-6 xl:px-8">
+          <Header />
+          <main className="pt-6">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/stocks" element={<Stocks />} />
+              <Route path="/stocks/:symbol" element={<StockDetail />} />
+            </Routes>
+          </main>
+        </div>
       </div>
     </Router>
   );

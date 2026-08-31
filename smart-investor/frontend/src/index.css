@@ -1,3 +1,88 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --bg-deep: #eef6ff;
+    --bg-soft: #f8fbff;
+    --panel: rgba(255, 255, 255, 0.78);
+    --panel-strong: rgba(255, 255, 255, 0.96);
+    --border: rgba(15, 23, 42, 0.08);
+    --text: #0f172a;
+    --muted: #64748b;
+    --green: #16a34a;
+    --red: #ef4444;
+    --blue: #2563eb;
+    --amber: #f59e0b;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --bg-deep: #020817;
+    --bg-soft: #0f172a;
+    --panel: rgba(15, 23, 42, 0.78);
+    --panel-strong: rgba(15, 23, 42, 0.94);
+    --border: rgba(148, 163, 184, 0.14);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --green: #4ade80;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --amber: #fbbf24;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-slate-100 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    background:
+      radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 25%),
+      radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 22%),
+      linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-deep) 100%);
+    font-family: Inter, "Segoe UI", sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  ::selection {
+    background: rgba(59, 130, 246, 0.25);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.6);
+    border-radius: 9999px;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply border border-white/20 bg-white/70 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/70;
+  }
+
+  .trading-card {
+    @apply glass-panel rounded-2xl p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_25px_70px_-25px_rgba(37,99,235,0.45)];
+  }
+
+  .metric-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400;
+  }
+
+  .metric-value {
+    @apply mt-2 text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50;
+  }
+}
