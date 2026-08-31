@@ -260,6 +260,7 @@ class NewsService:
 
         return final_score, boost, risk
     
+    @staticmethod
     def _is_news_stale(db, symbol: str, ttl_minutes: int = 60) -> bool:
         """
         Returns True if no news exists or latest news is older than TTL.
