@@ -85,4 +85,17 @@
   .metric-value {
     @apply mt-2 text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50;
   }
+
+  .ticker-track {
+    animation: ticker-scroll 28s linear infinite;
+  }
+}
+
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-35%);
+  }
 }

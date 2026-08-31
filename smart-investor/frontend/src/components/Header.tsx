@@ -2,10 +2,17 @@
 import { NavLink } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 import { useEffect, useState } from "react";
-import { fetchMarketStatusAPI } from "../api";
+import { fetchMarketStatusAPI, fetchStock } from "../api";
+
+type TickerItem = {
+  label: string;
+  value: number;
+  returnPct: number;
+};
 
 export default function Header() {
   const [marketOpen, setMarketOpen] = useState<boolean | null>(null);
+  const [tickerData, setTickerData] = useState<TickerItem[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -24,6 +31,47 @@ export default function Header() {
       clearInterval(interval);
     };
   }, []);
+
+  useEffect(() => {
+    const symbols = ["^NSEI", "^BSESN", "RELIANCE.NS", "TCS.NS", "BTC-USD", "GC=F"];
+
+    const loadTicker = async () => {
+      try {
+        const responses = await Promise.all(
+          symbols.map(async (symbol) => {
+            try {
+              const res = await fetchStock(symbol);
+              return {
+                label: symbol === "^NSEI" ? "NIFTY 50" : symbol === "^BSESN" ? "SENSEX" : symbol,
+                value: Number(res.data.current_price ?? 0),
+                returnPct: Number(res.data.return_1d ?? 0),
+              };
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        const valid = responses.filter(Boolean) as TickerItem[];
+        if (valid.length) setTickerData(valid);
+      } catch {}
+    };
+
+    loadTicker();
+    const interval = setInterval(loadTicker, 45000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const marketTicker = tickerData.length
+    ? tickerData
+    : [
+        { label: "NIFTY 50", value: 0, returnPct: 1.24 },
+        { label: "SENSEX", value: 0, returnPct: 0.96 },
+        { label: "RELIANCE", value: 0, returnPct: -0.42 },
+        { label: "TCS", value: 0, returnPct: 1.88 },
+        { label: "BTC/USD", value: 0, returnPct: -1.1 },
+        { label: "GOLD", value: 0, returnPct: 0.33 },
+      ];
 
   // Market status badge
   const MarketStatusBadge = () => (
@@ -46,26 +94,16 @@ export default function Header() {
     <>
       <div className="mb-5 overflow-hidden rounded-2xl border border-cyan-500/20 bg-slate-950/90 px-3 py-2 shadow-[0_0_30px_rgba(34,211,238,0.12)] backdrop-blur-xl">
         <div className="ticker-track flex min-w-full items-center gap-6 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300">
-          <span className="text-cyan-300">NIFTY 50</span>
-          <span className="text-emerald-400">+1.24%</span>
-          <span className="text-slate-400">•</span>
-          <span>SENSEX</span>
-          <span className="text-emerald-400">+0.96%</span>
-          <span className="text-slate-400">•</span>
-          <span>RELIANCE</span>
-          <span className="text-red-400">-0.42%</span>
-          <span className="text-slate-400">•</span>
-          <span>TCS</span>
-          <span className="text-emerald-400">+1.88%</span>
-          <span className="text-slate-400">•</span>
-          <span>NASDAQ</span>
-          <span className="text-emerald-400">+0.72%</span>
-          <span className="text-slate-400">•</span>
-          <span>BTC/USD</span>
-          <span className="text-red-400">-1.10%</span>
-          <span className="text-slate-400">•</span>
-          <span>GOLD</span>
-          <span className="text-emerald-400">+0.33%</span>
+          {marketTicker.map((item, index) => (
+            <div key={`${item.label}-${index}`} className="flex items-center gap-2">
+              <span className="text-cyan-300">{item.label}</span>
+              <span className={item.returnPct >= 0 ? "text-emerald-400" : "text-red-400"}>
+                {item.returnPct >= 0 ? "+" : ""}
+                {item.returnPct.toFixed(2)}%
+              </span>
+              {index < marketTicker.length - 1 && <span className="text-slate-500">•</span>}
+            </div>
+          ))}
         </div>
       </div>
 
