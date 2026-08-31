@@ -74,14 +74,14 @@ export default function PortfolioHoldingsTable({
 
   return (
     <div className="col-span-1 md:col-span-2 rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-lg border border-slate-200 dark:border-slate-700">
-      <h2 className="text-sm uppercase tracking-wide text-slate-500 mb-4">
+      <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
         Portfolio Holdings
       </h2>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-slate-500 border-b">
+            <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-700 dark:text-slate-400">
               <th className="py-2">Symbol</th>
               <th>Qty</th>
               <th>Avg Price</th>
@@ -136,7 +136,7 @@ export default function PortfolioHoldingsTable({
               );
             })}
             {/* Total row */}
-            <tr className="font-bold border-t dark:border-slate-700 bg-slate-100 dark:bg-slate-900">
+            <tr className="border-t border-slate-200 bg-slate-100 font-bold dark:border-slate-700 dark:bg-slate-900">
               <td className="py-2">Total</td>
               <td>{totalQty}</td>
               <td></td>
@@ -155,7 +155,7 @@ export default function PortfolioHoldingsTable({
               </td>
             </tr>
 
-            <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/80 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <tr className="border-t border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400">
               <td className="py-2">Total 1D / 5D / 30D</td>
               <td></td>
               <td></td>
