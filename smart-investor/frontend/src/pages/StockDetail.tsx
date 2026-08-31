@@ -101,6 +101,7 @@ export default function StockDetail() {
         <StockCard
           price={stock.current_price}
           symbol={symbol}
+          signal={signal?.signal}
           ma20={signal?.ma_20}
           ma50={signal?.ma_50}
         />

@@ -1,19 +1,34 @@
 interface StockCardProps {
   price: number;
   symbol: string;
-  ma20?: number;
-  ma50?: number;
+  signal?: string;
+  ma20?: number | string;
+  ma50?: number | string;
 }
 
-export default function StockCard({ price, symbol, ma20, ma50 }: StockCardProps) {
+export default function StockCard({
+  price,
+  symbol,
+  signal,
+  ma20,
+  ma50,
+}: StockCardProps) {
+  const numericMa20 = Number(ma20);
+  const numericMa50 = Number(ma50);
   const trend =
-    typeof ma20 !== "number" || typeof ma50 !== "number"
-      ? "Unavailable"
-      : ma20 > ma50
+    signal === "BUY"
       ? "Bullish"
-      : ma20 < ma50
+      : signal === "SELL"
       ? "Bearish"
-      : "Neutral";
+      : signal === "HOLD"
+      ? "Neutral"
+      : Number.isFinite(numericMa20) && Number.isFinite(numericMa50)
+      ? numericMa20 > numericMa50
+        ? "Bullish"
+        : numericMa20 < numericMa50
+        ? "Bearish"
+        : "Neutral"
+      : "Unavailable";
   const trendColor =
     trend === "Bullish"
       ? "text-emerald-500"
