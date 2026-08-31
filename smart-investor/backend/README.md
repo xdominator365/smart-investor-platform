@@ -104,3 +104,47 @@ RSI = 35 → ✅ Healthy entry
 
 
 
+## Current Backend Reference
+
+The backend is a FastAPI paper-trading API backed by PostgreSQL, SQLAlchemy, Alembic, and `yfinance`. It serves live market snapshots, technical signals, portfolio operations, auto-trade decisions, charts, and news insights.
+
+### Setup
+
+From `smart-investor/backend`:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn main:app --reload
+```
+
+Configure `DATABASE_URL` for PostgreSQL before applying migrations. The API listens on `http://127.0.0.1:8000` by default.
+
+### Guest Portfolio Contract
+
+Call `POST /session` with a JSON body containing a non-empty `guest_id`. The returned portfolio is isolated to that guest. Send the same value as `X-Guest-ID` on portfolio and paper-trade requests. The frontend creates and persists this identifier in browser local storage.
+
+### Market Data and Returns
+
+`GET /stock/{symbol}` returns the latest valid close plus OHLCV data and `return_1d`, `return_5d`, and `return_30d` percentages. The service skips invalid or `NaN` closing rows returned by `yfinance`, which is important when the market is closed or a provider returns an incomplete final row. Returns are calculated from valid historical closes over the requested trading-day lookback.
+
+### Main Routes
+
+| Route | Purpose |
+|---|---|
+| `GET /market/status` | Market status in IST. |
+| `GET /stock/{symbol}` | Current quote and period returns. |
+| `GET /signal/{symbol}` | Indicators and trading signal. |
+| `GET /chart/{symbol}` | Three months of chart and indicator data. |
+| `GET /paper-trade/portfolio` | Guest portfolio, holdings, and trade history. |
+| `POST /paper-trade/buy` / `POST /paper-trade/sell` | Rule-aware paper execution. |
+| `POST /paper-trade/auto/{symbol}` | Market-hours auto-trade evaluation. |
+| `GET /auto-trade/decisions/{symbol}` | Recent automated decisions. |
+| `POST /news/ingest/{symbol}` / `GET /news/insights/{symbol}` | News ingestion and sentiment insights. |
+
+For deployment, `Procfile` and `render.yaml` configure the Render service. Keep database credentials and other secrets in environment variables rather than source control.
+
+
+
