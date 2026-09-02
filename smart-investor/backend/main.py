@@ -1,13 +1,16 @@
+import asyncio
+
 from pydantic import BaseModel
 from models.user import User
 from models.portfolio import Portfolio
 
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect
 from services.market_data_service import MarketDataService
 from services.indicator_service import IndicatorService
 from services.signal_service import SignalService
 from services.paper_trade_service import PaperTradeService
 from services.decision_context_service import DecisionContextService
+from services.market_stream_service import MarketStreamService
 from fastapi.middleware.cors import CORSMiddleware
 
 from deps import get_db
@@ -40,6 +43,38 @@ app.add_middleware(
 
 class SessionRequest(BaseModel):
     guest_id: str
+
+
+market_stream_manager = MarketStreamService(refresh_interval=15)
+
+
+@app.on_event("startup")
+async def startup_event():
+    app.state.market_stream_task = asyncio.create_task(market_stream_manager.run())
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    task = getattr(app.state, "market_stream_task", None)
+    if task is not None:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+    await market_stream_manager.shutdown()
+
+
+@app.websocket("/ws/market")
+async def market_websocket(websocket: WebSocket):
+    await market_stream_manager.connect(websocket)
+
+    try:
+        while True:
+            payload = await websocket.receive_json()
+            await market_stream_manager.handle_message(websocket, payload)
+    except WebSocketDisconnect:
+        await market_stream_manager.disconnect(websocket)
+    except Exception:
+        await market_stream_manager.disconnect(websocket)
+
 
 @app.post("/session")
 def create_session(

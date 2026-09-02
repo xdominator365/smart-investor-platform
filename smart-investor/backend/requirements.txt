@@ -1,13 +1,18 @@
 fastapi
 uvicorn
-yfinance
+yfinance==1.7.0
 sqlalchemy
 psycopg2-binary
 alembic 
 python-dotenv
 textblob
+redis
+pytest
+httpx2
 
 # sqlalchemy → ORM
 # psycopg2-binary → PostgreSQL driver
 # alembic → migrations
 # python-dotenv → env variables (security)
+# redis → pub/sub fan-out for live market updates
+# pytest → backend test runner

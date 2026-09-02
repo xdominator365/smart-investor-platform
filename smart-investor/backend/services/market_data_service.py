@@ -6,9 +6,9 @@ from fastapi import HTTPException
 class MarketDataService:
 
     @staticmethod
-    def get_latest_stock_data(symbol: str) -> dict:
+    def get_latest_stock_data(symbol: str, interval: str = "1m") -> dict:
         stock = yf.Ticker(symbol)
-        data = stock.history(period="1d", auto_adjust=True)
+        data = stock.history(period="1d", interval=interval, auto_adjust=True)
 
         if data.empty:
             raise HTTPException(

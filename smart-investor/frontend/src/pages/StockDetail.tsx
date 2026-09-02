@@ -10,6 +10,7 @@ import {
   fetchMarketStatusAPI,
   fetchAutoTradeDecisions,
   fetchNewsInsights,
+  connectMarketStream,
 } from "../api";
 
 import StockCard from "../components/StockCard";
@@ -49,11 +50,22 @@ export default function StockDetail() {
     fetchAutoTradeDecisions(symbol).then(res => setDecisions(res.data));
     loadAutoTradeDecisions();
 
-    // NEW: fetch news insights
     fetchNewsInsights(symbol)
     .then(res => setNewsInsights(res.data))
     .catch(() => setNewsInsights(null));
 
+    const stream = connectMarketStream([symbol], (message) => {
+      if (message?.type !== "market_update") return;
+      if (!message?.symbol || message.symbol.toUpperCase() !== symbol.toUpperCase()) return;
+
+      setStock((current: any) => ({
+        ...(current ?? {}),
+        ...(message.data ?? {}),
+        symbol: (message.data?.symbol || symbol).toUpperCase(),
+      }));
+    });
+
+    return () => stream.close();
   }, [symbol]);
 
   if (!symbol) {
