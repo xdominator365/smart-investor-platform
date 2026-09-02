@@ -197,6 +197,14 @@ def paper_buy(
     portfolio = get_guest_portfolio(db, x_guest_id)
 
     context = DecisionContextService.build(symbol, db=db)
+    try:
+        news_insights = NewsService.build_insight(db, symbol)
+    except Exception as exc:
+        print(f"[NEWS] Paper buy request continuing without news insights: {exc}")
+        news_insights = {
+            "status": "UNAVAILABLE",
+            "message": "News insights are temporarily unavailable"
+        }
 
     rules = context["rules"]
     warnings = None
@@ -204,6 +212,7 @@ def paper_buy(
     if not rules["rules_passed"]:
         warnings = f"Trade executed with rule warnings: {rules['blocked_by']}"
 
+    signal_data = SignalService.generate_signal(context["df"], news_insights)
     stock = MarketDataService.get_latest_stock_data(symbol)
 
     PaperTradeService.buy(
@@ -218,7 +227,10 @@ def paper_buy(
         "message": "BUY executed",
         "portfolio_id": portfolio.id,
         "rules": rules,
-        "warnings": warnings
+        "warnings": warnings,
+        "signal": signal_data["signal"],
+        "signal_reason": signal_data["reason"],
+        "news_insights": news_insights
     }
 
 @app.post("/paper-trade/sell")
@@ -230,6 +242,14 @@ def paper_sell(
 ):
     portfolio = get_guest_portfolio(db, x_guest_id)
     context = DecisionContextService.build(symbol, db=db)
+    try:
+        news_insights = NewsService.build_insight(db, symbol)
+    except Exception as exc:
+        print(f"[NEWS] Paper sell request continuing without news insights: {exc}")
+        news_insights = {
+            "status": "UNAVAILABLE",
+            "message": "News insights are temporarily unavailable"
+        }
 
     rules = context["rules"]
     warnings = None
@@ -237,7 +257,7 @@ def paper_sell(
     if not rules["rules_passed"]:
         warnings = f"Trade executed with rule warnings: {rules['blocked_by']}"
 
-
+    signal_data = SignalService.generate_signal(context["df"], news_insights)
     stock = MarketDataService.get_latest_stock_data(symbol)
 
     PaperTradeService.sell(
@@ -248,7 +268,14 @@ def paper_sell(
         quantity=quantity
     )
 
-    return {"message": "SELL executed", "rules": rules, "warnings": warnings}
+    return {
+        "message": "SELL executed",
+        "rules": rules,
+        "warnings": warnings,
+        "signal": signal_data["signal"],
+        "signal_reason": signal_data["reason"],
+        "news_insights": news_insights
+    }
 
 @app.post("/paper-trade/auto/{symbol}")
 def auto_trade(
@@ -269,14 +296,23 @@ def auto_trade(
         return {"action": "MARKET CLOSED"}
 
     symbol = symbol.upper()
-    
+
+    try:
+        news_insights = NewsService.build_insight(db, symbol)
+    except Exception as exc:
+        print(f"[NEWS] Auto trade request continuing without news insights: {exc}")
+        news_insights = {
+            "status": "UNAVAILABLE",
+            "message": "News insights are temporarily unavailable"
+        }
+
     context = DecisionContextService.build(symbol, db=db)
     features = context["features"]
     rules = context["rules"]
     df = context["df"]
     snapshot = context["snapshot"]
 
-    signal_data = SignalService.generate_signal(df)
+    signal_data = SignalService.generate_signal(df, news_insights)
     signal = signal_data["signal"]
 
     stock = MarketDataService.get_latest_stock_data(symbol)
@@ -330,7 +366,10 @@ def auto_trade(
     return {
         "signal": signal,
         "action": action,
-        "rules": rules
+        "rules": rules,
+        "news_insights": news_insights,
+        "signal_reason": signal_data.get("reason"),
+        "news_bias": signal_data.get("news_bias")
     }
     
 # To fetch decision history for a symbol
