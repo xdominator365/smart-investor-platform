@@ -4,7 +4,7 @@ import pandas as pd
 class SignalService:
 
     @staticmethod
-    def generate_signal(df: pd.DataFrame) -> dict:
+    def generate_signal(df: pd.DataFrame, news_insights: dict | None = None) -> dict:
         
         required_cols = {"MA20", "MA50", "RSI"}
         missing = required_cols - set(df.columns)
@@ -39,8 +39,31 @@ class SignalService:
             signal = "HOLD"
             reason = "Trend and momentum do not align"
 
+        news_bias = None
+        sentiment = (news_insights or {}).get("sentiment")
+        if sentiment:
+            news_bias = round(
+                0.6 * float(sentiment.get("avg_24h", 0))
+                + 0.4 * float(sentiment.get("avg_7d", 0)),
+                3,
+            )
+
+            if signal == "BUY" and news_bias < -0.2:
+                signal = "HOLD"
+                reason = "Uptrend confirmed, but negative news sentiment increases risk"
+            elif signal == "SELL" and news_bias > 0.2:
+                signal = "HOLD"
+                reason = "Downtrend confirmed, but positive news sentiment reduces conviction"
+            elif signal == "BUY":
+                reason = f"{reason}; news sentiment supports the setup"
+            elif signal == "SELL":
+                reason = f"{reason}; news sentiment supports the setup"
+            else:
+                reason = f"{reason}; news sentiment is {sentiment.get('label', 'NEUTRAL').lower()}"
+
         return {
             "signal": signal,
             "confidence": confidence,
-            "reason": reason
+            "reason": reason,
+            "news_bias": news_bias,
         }

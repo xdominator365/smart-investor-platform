@@ -201,8 +201,15 @@ def signal(symbol: str, db: Session = Depends(get_db)):
     df = IndicatorService.add_moving_averages(df)
     df = IndicatorService.add_rsi(df)
 
-    signal_data = SignalService.generate_signal(df)
-    news_insights = NewsService.build_insight(db, symbol)
+    try:
+        news_insights = NewsService.build_insight(db, symbol)
+    except Exception as exc:
+        print(f"[NEWS] Signal request continuing without news insights: {exc}")
+        news_insights = {
+            "status": "UNAVAILABLE",
+            "message": "News insights are temporarily unavailable"
+        }
+    signal_data = SignalService.generate_signal(df, news_insights)
     latest = df.iloc[-1]
 
     return {

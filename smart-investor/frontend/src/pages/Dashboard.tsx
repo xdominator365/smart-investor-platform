@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   fetchPortfolio,
   fetchStock,
@@ -11,8 +11,44 @@ import TradeHistoryTable from "../components/TradeHistoryTable";
 
 export default function Dashboard() {
   const [portfolio, setPortfolio] = useState<any>(null);
-  const [prices, setPrices] = useState<Record<string, number>>({});
+  const [prices, setPrices] = useState<Record<string, {
+    current_price: number;
+    return_1d: number;
+    return_5d: number;
+    return_30d: number;
+  }>>({});
   const [marketOpen, setMarketOpen] = useState(false);
+
+  const portfolioPerformance = useMemo(() => {
+    if (!portfolio?.holdings?.length) {
+      return { return_1d: 0, return_5d: 0, return_30d: 0 };
+    }
+
+    let totalInvested = 0;
+    let weightedReturn1d = 0;
+    let weightedReturn5d = 0;
+    let weightedReturn30d = 0;
+
+    portfolio.holdings.forEach((holding: any) => {
+      const snapshot = prices[holding.symbol] ?? {
+        current_price: holding.avg_price,
+        return_1d: 0,
+        return_5d: 0,
+        return_30d: 0,
+      };
+      const invested = (holding.quantity ?? 0) * (holding.avg_price ?? 0);
+      totalInvested += invested;
+      weightedReturn1d += (snapshot.return_1d ?? 0) * invested;
+      weightedReturn5d += (snapshot.return_5d ?? 0) * invested;
+      weightedReturn30d += (snapshot.return_30d ?? 0) * invested;
+    });
+
+    return {
+      return_1d: totalInvested ? weightedReturn1d / totalInvested : 0,
+      return_5d: totalInvested ? weightedReturn5d / totalInvested : 0,
+      return_30d: totalInvested ? weightedReturn30d / totalInvested : 0,
+    };
+  }, [portfolio, prices]);
 
   // Load portfolio on initial render
   useEffect(() => {
@@ -44,16 +80,29 @@ export default function Dashboard() {
     const results = await Promise.all(
       symbols.map((symbol) =>
         fetchStock(symbol)
-          .then((res) => [symbol, res.data.current_price] as [string, number])
+          .then((res) => [symbol, res.data] as [string, any])
           .catch(() => [symbol, null])
       )
     );
 
     if (cancelledRef.current) return;
 
-    const priceMap: Record<string, number> = {};
-    results.forEach(([symbol, price]) => {
-      if (typeof price === "number") priceMap[symbol] = price;
+    const priceMap: Record<string, {
+      current_price: number;
+      return_1d: number;
+      return_5d: number;
+      return_30d: number;
+    }> = {};
+
+    results.forEach(([symbol, stockData]) => {
+      if (stockData && typeof stockData.current_price === "number") {
+        priceMap[symbol] = {
+          current_price: stockData.current_price,
+          return_1d: Number(stockData.return_1d ?? 0),
+          return_5d: Number(stockData.return_5d ?? 0),
+          return_30d: Number(stockData.return_30d ?? 0),
+        };
+      }
     });
 
     setPrices(priceMap);
@@ -94,7 +143,10 @@ export default function Dashboard() {
   // Render dashboard components
   return (
     <main className="p-6 grid grid-cols-1 gap-6">
-      <PortfolioSummary portfolio={portfolio} />
+      <PortfolioSummary
+        portfolio={portfolio}
+        performance={portfolioPerformance}
+      />
       <PortfolioHoldingsTable
         holdings={portfolio.holdings}
         prices={prices}

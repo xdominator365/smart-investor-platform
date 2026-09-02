@@ -4,6 +4,28 @@
 This document provides a detailed overview of the **system architecture** for the Smart Investor Platform.  
 The design emphasizes modularity, scalability, and clean separation between frontend and backend layers.
 
+## Current Product Scope
+
+DHIRA is a paper-trading investment assistant with a React trading dashboard and a FastAPI service. The current experience includes:
+
+- Live market prices and 1-day, 5-day, and 30-day return percentages powered by `yfinance`.
+- Guest-based portfolio isolation using the `X-Guest-ID` request header.
+- Portfolio holdings, current value, P&L, and weighted period-return summaries.
+- BUY, SELL, and rule-aware auto-trade paper execution.
+- Technical signals using MA20, MA50, RSI, volume, volatility, and news insights.
+- A dark/light trading-terminal interface with a live ticker strip, animated return states, and performance sparklines.
+
+## Recent Implementation Changes
+
+Recent work from August 13 through September 1, 2026 includes:
+
+- Added Render deployment configuration, a Vercel API proxy, and single-page-app routing.
+- Added browser guest sessions with isolated portfolios and a default paper-trading balance.
+- Added portfolio 1D/5D/30D return columns, total-return summaries, and green/red profit-loss states.
+- Redesigned the dashboard with a premium trading-terminal layout, dark/light theme support, motion, and responsive cards.
+- Added a live market ticker and return-driven mini performance charts.
+- Fixed invalid `yfinance` final rows by selecting the latest valid close when market data contains `NaN` values.
+
 ---
 
 ## 🏗️ 1. High-Level Design
@@ -33,9 +55,10 @@ The platform follows a **modular, service-oriented architecture (SOA)** where ea
 ### 📂 Core Modules
 ```
 backend/
-├── api/          # Route definitions and request handling
 ├── services/     # Core business logic (trading, analytics, etc.)
+├── rules/        # Trend, momentum, volume, and volatility rules
 ├── models/       # ORM models and schema definitions
+├── alembic/      # Database migrations
 ├── utils/        # Helper and utility functions
 └── main.py       # Application entry point
 ```
@@ -76,10 +99,10 @@ frontend/
 A simplified overview of the trading decision cycle:
 
 1. **User selects a stock** from the UI.  
-2. **Backend computes key indicators** (RSI, MACD, etc.) from live market data.  
+2. **Backend computes key indicators** (MA20, MA50, RSI, volume, and volatility) from live market data.
 3. **Signal is generated** (Buy/Sell/Hold).  
 4. **Auto-trade engine** evaluates deterministic trading rules.  
-5. **Decision is logged** in the `trade_log` (either executed or blocked).  
+5. **Decision is logged** in the trade and auto-trade decision records (either executed or blocked).
 6. **UI instantly reflects** the decision and updates portfolio state.
 
 ```
@@ -101,7 +124,26 @@ Key relational entities that form the backbone of the trading system:
 
 ---
 
-## 🔮 6. Future Extensions
+## 🔌 6. API Surface
+
+The backend exposes these primary routes. Portfolio and trade routes require an `X-Guest-ID` header created by the frontend session flow.
+
+| Route | Purpose |
+|---|---|
+| `POST /session` | Create or restore a guest user and paper portfolio. |
+| `GET /market/status` | Return market-open status and the `Asia/Kolkata` timezone. |
+| `GET /stock/{symbol}` | Return the latest price, OHLCV data, and 1D/5D/30D returns. |
+| `GET /signal/{symbol}` | Return technical indicators and BUY/SELL/HOLD signal data. |
+| `GET /chart/{symbol}` | Return historical prices with MA20, MA50, and RSI values. |
+| `GET /paper-trade/portfolio` | Return the current guest portfolio and trade history. |
+| `POST /paper-trade/buy` / `POST /paper-trade/sell` | Execute paper trades at the latest market price. |
+| `POST /paper-trade/auto/{symbol}` | Evaluate rules and execute an automated paper trade when the market is open. |
+| `GET /auto-trade/decisions/{symbol}` | Return recent automated-trade decisions. |
+| `POST /news/ingest/{symbol}` / `GET /news/insights/{symbol}` | Ingest and retrieve news sentiment insights. |
+
+The production frontend sends `/api` requests through the Vercel rewrite to the Render backend. Local development uses `VITE_API_URL` or `http://127.0.0.1:8000`.
+
+## 🔮 7. Future Extensions
 
 Planned architectural enhancements to expand system intelligence and scale:
 
@@ -147,9 +189,10 @@ smart-investor-platform/
 ├── smart-investor/
 │   ├── backend/
 │   ├── frontend/
-│   ├── .env.example
-│   └── README.md
-└── docs/
+│   ├── backend/README.md
+│   └── frontend/README.md
+├── README.md
+└── *.md                 # setup and deployment documentation
 ```
 
 ---
@@ -250,10 +293,12 @@ npm run dev
 
 ---
 
-## 📊 7. Market Behavior
+## 📊 8. Market Behavior
 
 - **Market hours (IST):** 9:15 AM – 3:30 PM  
 - Data **auto-refresh pauses** when the market is closed  
 - **Auto-trade feature** is disabled when the market is closed  
+
+When markets are closed, the backend serves the latest valid historical close. The frontend refreshes portfolio prices after loading and when market status changes, then polls holdings every 10 seconds while the market is open. The global ticker refreshes every 45 seconds.
 
 ---
