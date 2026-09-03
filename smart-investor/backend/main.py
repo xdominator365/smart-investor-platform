@@ -1,11 +1,16 @@
 import asyncio
+import os
 import pandas as pd
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 from pydantic import BaseModel
 from models.user import User
 from models.portfolio import Portfolio
 
 from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect
+from fastapi.responses import RedirectResponse
 from services.market_data_service import MarketDataService
 from services.indicator_service import IndicatorService
 from services.signal_service import SignalService
@@ -18,11 +23,13 @@ from deps import get_db
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from models.position import Position
+from models.broker_order import BrokerOrder
 
 from utils.market_hours import is_market_open
 from models.auto_trade_decision import AutoTradeDecision
 
 from services.news_service import NewsService
+from services.zerodha_service import ZerodhaService
 
 
 app = FastAPI(title="AI Investment Assistant MVP")
@@ -44,6 +51,19 @@ app.add_middleware(
 
 class SessionRequest(BaseModel):
     guest_id: str
+
+
+class ZerodhaOrderPreviewRequest(BaseModel):
+    symbol: str
+    side: str
+    quantity: int
+    reference_price: float
+
+
+class ZerodhaOrderRequest(BaseModel):
+    preview_id: str
+    idempotency_key: str
+    confirmed: bool
 
 
 market_stream_manager = MarketStreamService(refresh_interval=15)
@@ -177,6 +197,101 @@ def market_status():
         "market_open": is_market_open(),
         "timezone": "Asia/Kolkata"
     }
+
+
+@app.get("/broker/zerodha/connect")
+def zerodha_connect(x_guest_id: str | None = Header(default=None)):
+    if not x_guest_id or not x_guest_id.strip():
+        raise HTTPException(status_code=400, detail="X-Guest-ID header is required")
+    try:
+        return {"login_url": ZerodhaService.create_login_url(x_guest_id.strip())}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/broker/zerodha/callback")
+def zerodha_callback(
+    request_token: str | None = None,
+    state: str | None = None,
+    status: str | None = None,
+    db: Session = Depends(get_db),
+):
+    if status != "success" or not request_token or not state:
+        return RedirectResponse(ZerodhaService.callback_url("error", "Login was cancelled"))
+    try:
+        ZerodhaService.complete_login(db, request_token, state)
+        return RedirectResponse(ZerodhaService.callback_url("connected"))
+    except (RuntimeError, ValueError) as exc:
+        return RedirectResponse(ZerodhaService.callback_url("error", str(exc)))
+
+
+@app.get("/broker/zerodha/status")
+def zerodha_status(
+    x_guest_id: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    if not x_guest_id or not x_guest_id.strip():
+        raise HTTPException(status_code=400, detail="X-Guest-ID header is required")
+    return ZerodhaService.connection_status(db, x_guest_id.strip())
+
+
+@app.post("/broker/zerodha/order/preview")
+def zerodha_order_preview(
+    request: ZerodhaOrderPreviewRequest,
+    x_guest_id: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    if not x_guest_id or not x_guest_id.strip():
+        raise HTTPException(status_code=400, detail="X-Guest-ID header is required")
+    if not is_market_open():
+        raise HTTPException(status_code=409, detail="Market is closed")
+    return ZerodhaService.preview_order(
+        db=db,
+        guest_id=x_guest_id.strip(),
+        symbol=request.symbol,
+        side=request.side,
+        quantity=request.quantity,
+        price=request.reference_price,
+    )
+
+
+@app.post("/broker/zerodha/order")
+def zerodha_order(
+    request: ZerodhaOrderRequest,
+    x_guest_id: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    if not x_guest_id or not x_guest_id.strip():
+        raise HTTPException(status_code=400, detail="X-Guest-ID header is required")
+    if not is_market_open():
+        raise HTTPException(status_code=409, detail="Market is closed")
+    return ZerodhaService.execute_order(
+        db=db,
+        guest_id=x_guest_id.strip(),
+        preview_id=request.preview_id,
+        idempotency_key=request.idempotency_key,
+        confirmed=request.confirmed,
+    )
+
+
+@app.get("/broker/zerodha/orders/{order_id}")
+def zerodha_order_status(
+    order_id: int,
+    x_guest_id: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    if not x_guest_id or not x_guest_id.strip():
+        raise HTTPException(status_code=400, detail="X-Guest-ID header is required")
+    user = db.query(User).filter(User.guest_id == x_guest_id.strip()).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order = db.query(BrokerOrder).filter(
+        BrokerOrder.id == order_id,
+        BrokerOrder.user_id == user.id,
+    ).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return ZerodhaService.order_status(db, x_guest_id.strip(), order)
 
 @app.get("/")
 def home():

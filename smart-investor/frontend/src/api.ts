@@ -80,6 +80,25 @@ export const fetchAutoTradeDecisions = (symbol: string) =>
 export const fetchNewsInsights = (symbol: string) =>
   API.get(`/news/insights/${symbol}`);
 
+export const getZerodhaLoginUrl = () =>
+  API.get<{ login_url: string }>("/broker/zerodha/connect");
+
+export const fetchZerodhaStatus = () =>
+  API.get<{ connected: boolean; user_id: string | null }>("/broker/zerodha/status");
+
+export const previewZerodhaOrder = (order: {
+  symbol: string;
+  side: "BUY" | "SELL";
+  quantity: number;
+  reference_price: number;
+}) => API.post("/broker/zerodha/order/preview", order);
+
+export const placeZerodhaOrder = (order: {
+  preview_id: string;
+  idempotency_key: string;
+  confirmed: boolean;
+}) => API.post("/broker/zerodha/order", order);
+
 export const connectMarketStream = (
   symbols: string[],
   onMessage: (message: any) => void,

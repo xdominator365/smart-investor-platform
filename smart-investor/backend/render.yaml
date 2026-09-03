@@ -11,6 +11,18 @@ services:
         sync: false
       - key: PYTHON_VERSION
         value: 3.11.7
+      - key: KITE_API_KEY
+        sync: false
+      - key: KITE_API_SECRET
+        sync: false
+      - key: BROKER_TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: MARKETAUX_API_KEY
+        sync: false
+      - key: REDIS_URL
+        sync: false
 
 databases:
   - name: smart_investor_db

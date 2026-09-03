@@ -7,3 +7,7 @@ from models.ml_feature_snapshot import MLFeatureSnapshot
 from models.rule_engine_result import RuleEngineResult
 from models.ml_outcome import MLOutcome
 from models.news_event import NewsEvent
+from models.broker_account import BrokerAccount
+from models.broker_order import BrokerOrder
+from models.broker_account import BrokerAccount
+from models.broker_order import BrokerOrder

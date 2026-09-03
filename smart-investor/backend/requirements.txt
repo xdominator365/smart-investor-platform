@@ -1,6 +1,8 @@
 fastapi
 uvicorn
 yfinance==1.7.0
+kiteconnect
+cryptography
 sqlalchemy
 psycopg2-binary
 alembic 
