@@ -87,7 +87,7 @@ export default function Dashboard() {
 
     if (cancelledRef.current) return;
 
-    const priceMap: Record<string, {
+    const fetchedPrices: Record<string, {
       current_price: number;
       return_1d: number;
       return_5d: number;
@@ -96,7 +96,7 @@ export default function Dashboard() {
 
     results.forEach(([symbol, stockData]) => {
       if (stockData && typeof stockData.current_price === "number") {
-        priceMap[symbol] = {
+        fetchedPrices[symbol] = {
           current_price: stockData.current_price,
           return_1d: Number(stockData.return_1d ?? 0),
           return_5d: Number(stockData.return_5d ?? 0),
@@ -105,7 +105,10 @@ export default function Dashboard() {
       }
     });
 
-    setPrices(priceMap);
+    setPrices((currentPrices) => ({
+      ...currentPrices,
+      ...fetchedPrices,
+    }));
   };
 
   // Fetch prices immediately on portfolio load or market status change

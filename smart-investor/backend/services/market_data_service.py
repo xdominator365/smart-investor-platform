@@ -36,36 +36,6 @@ class MarketDataService:
         return round(((current_close - previous_close) / previous_close) * 100, 2)
 
     @staticmethod
-    def _safe_numeric(value, default=0.0):
-        return default if pd.isna(value) else float(value)
-
-    @staticmethod
-    def _last_valid_close(data: pd.DataFrame, lookback: int = 0) -> float:
-        if data.empty:
-            return 0.0
-
-        start_index = len(data) - 1 - lookback
-        for idx in range(start_index, -1, -1):
-            close = MarketDataService._safe_numeric(data.iloc[idx].get("Close"), default=None)
-            if close is not None and close > 0:
-                return close
-
-        return 0.0
-
-    @staticmethod
-    def _calculate_return_percent(data: pd.DataFrame, lookback_days: int) -> float:
-        if data.empty or len(data) <= lookback_days:
-            return 0.0
-
-        current_close = MarketDataService._last_valid_close(data, 0)
-        previous_close = MarketDataService._last_valid_close(data, lookback_days)
-
-        if previous_close <= 0 or current_close <= 0:
-            return 0.0
-
-        return round(((current_close - previous_close) / previous_close) * 100, 2)
-
-    @staticmethod
     def get_latest_stock_data(symbol: str, interval: str | None = None) -> dict:
         stock = yf.Ticker(symbol)
         if interval:

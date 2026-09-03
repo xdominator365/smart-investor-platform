@@ -1,4 +1,5 @@
 import asyncio
+import pandas as pd
 
 from pydantic import BaseModel
 from models.user import User
@@ -189,7 +190,16 @@ def stock(symbol: str):
     if not symbol or len(symbol) < 2:
         raise HTTPException(status_code=400, detail="Invalid stock symbol")
 
-    return MarketDataService.get_latest_stock_data(symbol)
+    try:
+        return MarketDataService.get_latest_stock_data(symbol)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[MARKET] Stock data unavailable for {symbol}: {exc}")
+        raise HTTPException(
+            status_code=503,
+            detail="Market data is temporarily unavailable",
+        ) from exc
 
 
 @app.get("/signal/{symbol}")
@@ -197,9 +207,18 @@ def signal(symbol: str, db: Session = Depends(get_db)):
     if not symbol or len(symbol) < 2:
         raise HTTPException(status_code=400, detail="Invalid stock symbol")
 
-    df = MarketDataService.get_historical_data(symbol)
-    df = IndicatorService.add_moving_averages(df)
-    df = IndicatorService.add_rsi(df)
+    try:
+        df = MarketDataService.get_historical_data(symbol)
+        df = IndicatorService.add_moving_averages(df)
+        df = IndicatorService.add_rsi(df)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[SIGNAL] Data unavailable for {symbol}: {exc}")
+        raise HTTPException(
+            status_code=503,
+            detail="Signal data is temporarily unavailable",
+        ) from exc
 
     try:
         news_insights = NewsService.build_insight(db, symbol)
@@ -212,12 +231,15 @@ def signal(symbol: str, db: Session = Depends(get_db)):
     signal_data = SignalService.generate_signal(df, news_insights)
     latest = df.iloc[-1]
 
+    def optional_number(value):
+        return None if pd.isna(value) else round(float(value), 2)
+
     return {
         "symbol": symbol.upper(),
-        "current_price": round(latest["Close"], 2),
-        "ma_20": round(latest["MA20"], 2),
-        "ma_50": round(latest["MA50"], 2),
-        "rsi": round(latest["RSI"], 2),
+        "current_price": optional_number(latest["Close"]),
+        "ma_20": optional_number(latest["MA20"]),
+        "ma_50": optional_number(latest["MA50"]),
+        "rsi": optional_number(latest["RSI"]),
         **signal_data,
         "news_insights": news_insights
     }
