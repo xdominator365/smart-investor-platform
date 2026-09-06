@@ -436,11 +436,6 @@ def auto_trade(
         return {"action": "MARKET CLOSED"}
 
     symbol = symbol.upper()
-
-    if not is_market_open():
-        return {"action": "MARKET CLOSED"}
-
-    symbol = symbol.upper()
     
     context = DecisionContextService.build(symbol, db=db)
     features = context["features"]
@@ -448,7 +443,16 @@ def auto_trade(
     df = context["df"]
     snapshot = context["snapshot"]
 
-    signal_data = SignalService.generate_signal(df)
+    try:
+        news_insights = NewsService.build_insight(db, symbol)
+    except Exception as exc:
+        print(f"[NEWS] Auto-trade continuing without news insights: {exc}")
+        news_insights = {
+            "status": "UNAVAILABLE",
+            "message": "News insights are temporarily unavailable"
+        }
+
+    signal_data = SignalService.generate_signal(df, news_insights)
     signal = signal_data["signal"]
 
     stock = MarketDataService.get_latest_stock_data(symbol)

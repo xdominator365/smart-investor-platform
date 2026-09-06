@@ -38,26 +38,42 @@ class DecisionContextService:
         # PERSIST SNAPSHOT (ONLY IF DB IS PROVIDED)
         snapshot = None
         if db:
-            snapshot = MLFeatureSnapshot(
-                symbol=symbol.upper(),
-                price=features["price"],
-                ma20=features["ma20"],
-                ma50=features["ma50"],
-                rsi_14=features["rsi_14"],
-                rsi_slope=features["rsi_slope"],
-                volume_ratio=features["volume_ratio"],
-                atr_percent=features["atr_percent"],
-                rule_trend_ok=rule_output["rule_trend_ok"],
-                rule_rsi_ok=rule_output["rule_rsi_ok"],
-                rule_volume_ok=rule_output["rule_volume_ok"],
-                rule_volatility_ok=rule_output["rule_volatility_ok"],
-                rules_passed=rule_output["rules_passed"],
-                risk_level=rule_output["risk_level"],
+            # Check for duplicate consecutive snapshots
+            last_snapshot = (
+                db.query(MLFeatureSnapshot)
+                .filter(MLFeatureSnapshot.symbol == symbol.upper())
+                .order_by(MLFeatureSnapshot.snapshot_id.desc())
+                .first()
             )
 
-            db.add(snapshot)
-            db.commit()
-            db.refresh(snapshot)
+            is_duplicate = (
+                last_snapshot is not None and
+                abs(last_snapshot.price - features["price"]) < 1e-4 and
+                abs(last_snapshot.rsi_14 - features["rsi_14"]) < 1e-4
+            )
+
+            if is_duplicate:
+                snapshot = last_snapshot
+            else:
+                snapshot = MLFeatureSnapshot(
+                    symbol=symbol.upper(),
+                    price=features["price"],
+                    ma20=features["ma20"],
+                    ma50=features["ma50"],
+                    rsi_14=features["rsi_14"],
+                    rsi_slope=features["rsi_slope"],
+                    volume_ratio=features["volume_ratio"],
+                    atr_percent=features["atr_percent"],
+                    rule_trend_ok=rule_output["rule_trend_ok"],
+                    rule_rsi_ok=rule_output["rule_rsi_ok"],
+                    rule_volume_ok=rule_output["rule_volume_ok"],
+                    rule_volatility_ok=rule_output["rule_volatility_ok"],
+                    rules_passed=rule_output["rules_passed"],
+                    risk_level=rule_output["risk_level"],
+                )
+                db.add(snapshot)
+                db.commit()
+                db.refresh(snapshot)
 
         return {
             "features": features,

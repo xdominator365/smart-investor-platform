@@ -136,21 +136,18 @@ def label_snapshot(snapshot: MLFeatureSnapshot, db: Session):
     # Confidence score (how clean the outcome was)
     confidence_score = min(abs(future_return) / SUCCESS_RETURN, 1.0)
 
-    # Persist outcome
+    # Return the uncommitted outcome object
     outcome = MLOutcome(
-    snapshot_id=int(snapshot.snapshot_id),
-    horizon_minutes=int(HORIZON_MINUTES),
-    future_return=float(future_return),
-    max_favorable_move=float(max_favorable_move),
-    max_adverse_move=float(max_adverse_move),
-    outcome_label=str(outcome_label),
-    confidence_score=float(confidence_score)
+        snapshot_id=int(snapshot.snapshot_id),
+        horizon_minutes=int(HORIZON_MINUTES),
+        future_return=float(future_return),
+        max_favorable_move=float(max_favorable_move),
+        max_adverse_move=float(max_adverse_move),
+        outcome_label=str(outcome_label),
+        confidence_score=float(confidence_score)
     )
 
-    db.add(outcome)
-    db.commit()
-
-    return outcome_label
+    return outcome
     
 def run_labeling_job(db, limit=50):
     labeled_count = 0
