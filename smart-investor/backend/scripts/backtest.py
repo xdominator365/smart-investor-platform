@@ -154,8 +154,8 @@ def run_backtest(symbols, strategy_id="trend_follower", period="2y"):
     
 if __name__ == "__main__":
     print("Testing Strategy 1: Trend Following")
-    run_backtest(NIFTY_50[:10], strategy_id="trend_follower", period="2y")
+    run_backtest(NIFTY_50, strategy_id="trend_follower", period="3y")
     print("-" * 50)
     print("Testing Strategy 2: Mean Reversion")
-    run_backtest(NIFTY_50[:10], strategy_id="mean_reversion", period="2y")
+    run_backtest(NIFTY_50, strategy_id="mean_reversion", period="3y")
 
