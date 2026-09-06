@@ -18,7 +18,7 @@ if not portfolio:
     portfolio = Portfolio(
         user_id=user.id,
         name="Paper Portfolio",
-        cash_balance=100000.0
+        cash_balance=5000000.0
     )
     db.add(portfolio)
     db.commit()
