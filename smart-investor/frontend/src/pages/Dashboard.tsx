@@ -172,38 +172,49 @@ export default function Dashboard() {
     <main className="p-6 grid grid-cols-1 gap-6">
       
       {/* AI AUTO-PILOT DASHBOARD */}
-      <div className={`trading-card rounded-2xl p-6 transition-all duration-500 border ${isBotEnabled ? 'border-sky-500 shadow-[0_0_20px_-5px_rgba(14,165,233,0.3)]' : 'border-slate-200 dark:border-slate-800'}`}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                {isBotEnabled ? (
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
-                  </span>
-                ) : (
-                  <span className="h-3 w-3 rounded-full bg-slate-300 dark:bg-slate-700"></span>
-                )}
-                AI Auto-Trader (Sleep Mode)
-              </h2>
+      <div className={`relative overflow-hidden rounded-2xl p-4 md:p-5 transition-all duration-500 border ${isBotEnabled ? 'border-sky-500/50 bg-sky-500/5 shadow-[0_0_30px_-10px_rgba(14,165,233,0.3)]' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'}`}>
+        {isBotEnabled && (
+          <div className="absolute top-0 right-0 h-full w-1/2 bg-gradient-to-l from-sky-500/10 to-transparent pointer-events-none" />
+        )}
+        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-5 relative z-10">
+          <div className="flex items-start gap-4">
+            <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${isBotEnabled ? 'bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.5)]' : 'bg-slate-100 dark:bg-slate-800'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isBotEnabled ? 'text-white' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              When enabled, the AI will automatically scan the market and execute trades on your behalf.
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                  AI Autonomous Agent
+                </h2>
+                {isBotEnabled && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-500 tracking-wider">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                    </span>
+                    ACTIVE
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md leading-relaxed">
+                Sleep mode enabled. AI will monitor the market and execute live trades based on your selected strategy parameters.
+              </p>
+            </div>
           </div>
           
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="flex-1 md:flex-none md:w-48">
+          <div className="flex flex-row items-center justify-between xl:justify-end gap-3 w-full xl:w-auto mt-2 xl:mt-0 pt-4 xl:pt-0 border-t xl:border-t-0 border-slate-100 dark:border-slate-800/50">
+            <div className="flex-1 xl:flex-none">
               <select 
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50"
+                className={`w-full xl:w-56 appearance-none bg-slate-50 dark:bg-slate-950/50 border ${isBotEnabled ? 'border-sky-500/30 text-sky-700 dark:text-sky-400' : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'} rounded-xl p-2.5 px-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-60 transition-colors`}
                 value={botStrategyId}
                 onChange={handleStrategyChange}
                 disabled={isBotEnabled}
               >
                 {strategies.map((strat: any) => (
                   <option key={strat.id} value={strat.id}>
-                    {strat.name}
+                    {strat.name.toUpperCase()}
                   </option>
                 ))}
               </select>
@@ -211,14 +222,20 @@ export default function Dashboard() {
             
             <button
               onClick={handleToggleBot}
-              className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${isBotEnabled ? 'bg-sky-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+              className={`relative inline-flex h-9 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${isBotEnabled ? 'bg-sky-500 shadow-inner' : 'bg-slate-200 dark:bg-slate-700'}`}
               role="switch"
               aria-checked={isBotEnabled}
             >
               <span className="sr-only">Toggle AI Bot</span>
               <span
-                className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isBotEnabled ? 'translate-x-6' : 'translate-x-0'}`}
-              />
+                className={`pointer-events-none flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${isBotEnabled ? 'translate-x-7' : 'translate-x-0'}`}
+              >
+                {isBotEnabled && (
+                  <svg className="h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </span>
             </button>
           </div>
         </div>
