@@ -57,6 +57,15 @@ export const fetchSignal = (symbol: string, strategyId?: string) =>
     params: strategyId ? { strategy_id: strategyId } : undefined
   });
 
+export const fetchBotStatus = () =>
+  API.get(`/portfolio/bot/status`);
+
+export const toggleBot = (enabled: boolean) =>
+  API.post(`/portfolio/bot/toggle`, { enabled });
+
+export const setBotStrategy = (strategy_id: string) =>
+  API.post(`/portfolio/bot/strategy`, { strategy_id });
+
 export const fetchChartData = (symbol: string) =>
   API.get(`/chart/${symbol}`);
 

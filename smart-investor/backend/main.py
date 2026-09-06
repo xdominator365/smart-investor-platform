@@ -441,9 +441,10 @@ def auto_trade(
     symbol: str,
     strategy_id: str = "trend_follower",
     x_guest_id: str | None = Header(default=None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    portfolio_override=None
 ):
-    portfolio = get_guest_portfolio(db, x_guest_id)
+    portfolio = portfolio_override if portfolio_override else get_guest_portfolio(db, x_guest_id)
 
     if not is_market_open():
         return {"action": "MARKET CLOSED"}
@@ -608,6 +609,72 @@ def portfolio(
         db,
         portfolio_id=guest_portfolio.id
     )
+
+from pydantic import BaseModel
+class BotToggleRequest(BaseModel):
+    enabled: bool
+
+class BotStrategyRequest(BaseModel):
+    strategy_id: str
+
+@app.get("/portfolio/bot/status")
+def get_bot_status(x_guest_id: str | None = Header(default=None), db: Session = Depends(get_db)):
+    from models.portfolio import Portfolio
+    guest_portfolio = get_guest_portfolio(db, x_guest_id)
+    return {
+        "is_bot_enabled": guest_portfolio.is_bot_enabled,
+        "bot_strategy_id": guest_portfolio.bot_strategy_id
+    }
+
+@app.post("/portfolio/bot/toggle")
+def toggle_bot(req: BotToggleRequest, x_guest_id: str | None = Header(default=None), db: Session = Depends(get_db)):
+    from models.portfolio import Portfolio
+    guest_portfolio = get_guest_portfolio(db, x_guest_id)
+    guest_portfolio.is_bot_enabled = req.enabled
+    db.commit()
+    return {"status": "success", "is_bot_enabled": guest_portfolio.is_bot_enabled}
+
+@app.post("/portfolio/bot/strategy")
+def set_bot_strategy(req: BotStrategyRequest, x_guest_id: str | None = Header(default=None), db: Session = Depends(get_db)):
+    from models.portfolio import Portfolio
+    guest_portfolio = get_guest_portfolio(db, x_guest_id)
+    guest_portfolio.bot_strategy_id = req.strategy_id
+    db.commit()
+    return {"status": "success", "bot_strategy_id": guest_portfolio.bot_strategy_id}
+
+@app.post("/api/bot/execute-all")
+def execute_all_bots(db: Session = Depends(get_db)):
+    # This acts as the Serverless Cron Endpoint.
+    # We query all portfolios with bot enabled, and execute trades for them.
+    from models.portfolio import Portfolio
+    from services.market_data_service import MarketDataService
+    
+    if not MarketDataService.is_market_open():
+        return {"status": "skipped", "reason": "Market is closed"}
+        
+    active_portfolios = db.query(Portfolio).filter(Portfolio.is_bot_enabled == True).all()
+    if not active_portfolios:
+        return {"status": "skipped", "reason": "No active bots"}
+        
+    # In a real heavy-load scenario, we'd queue this to Celery/Kafka.
+    # For now, we simulate execution across the top 10 stocks for speed.
+    NIFTY_TOP_10 = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "BHARTIARTL.NS", "SBIN.NS", "INFY.NS", "LICI.NS", "ITC.NS", "HINDUNILVR.NS"]
+    
+    executed_trades = []
+    
+    for symbol in NIFTY_TOP_10:
+        # Avoid circular import, we call paper_auto_trade internally by faking requests
+        # Or directly instantiate logic. To keep it DRY, we just hit our own function logic.
+        for port in active_portfolios:
+            try:
+                # Direct call to the auto trade logic internally
+                res = auto_trade(symbol, strategy_id=port.bot_strategy_id, db=db, portfolio_override=port)
+                if "EXECUTED" in res["action"]:
+                    executed_trades.append({"portfolio_id": port.id, "symbol": symbol, "action": res["action"]})
+            except Exception as e:
+                pass
+
+    return {"status": "success", "portfolios_processed": len(active_portfolios), "trades_executed": executed_trades}
 
 # NEWS INGESTION AND SENTIMENT ANALYSIS ENDPOINTS
 
