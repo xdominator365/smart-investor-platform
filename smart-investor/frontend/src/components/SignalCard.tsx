@@ -2,12 +2,14 @@ interface SignalCardProps {
   signal: string;
   confidence: number;
   reason: string;
+  strategyName?: string;
 }
 
 export default function SignalCard({
   signal,
   confidence,
   reason,
+  strategyName,
 }: SignalCardProps) {
   const signalColor =
     signal === "BUY"
@@ -21,7 +23,7 @@ export default function SignalCard({
       <div className="mb-5 flex items-center justify-between">
         <p className="metric-label">AI signal</p>
         <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-          Model
+          {strategyName || "Model"}
         </span>
       </div>
 

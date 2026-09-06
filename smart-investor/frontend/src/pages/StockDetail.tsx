@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   fetchStock,
+  fetchStrategies,
   fetchSignal,
   fetchChartData,
   paperBuy,
@@ -31,6 +32,8 @@ export default function StockDetail() {
 
   const [stock, setStock] = useState<any>(null);
   const [signal, setSignal] = useState<any>(null);
+  const [strategies, setStrategies] = useState<any[]>([]);
+  const [selectedStrategyId, setSelectedStrategyId] = useState<string>("trend_follower");
   const [chartData, setChartData] = useState<any[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState("");
@@ -106,11 +109,15 @@ export default function StockDetail() {
       .catch(() => {});
   }, []);
 
-  // fetch stock data once per symbol
+  // fetch strategies
+  useEffect(() => {
+    fetchStrategies().then((res) => setStrategies(res.data.strategies));
+  }, []);
+
+  // fetch stock data and signal
   useEffect(() => {
     if (!symbol) return;
     fetchStock(symbol).then((res) => setStock(res.data));
-    fetchSignal(symbol).then((res) => setSignal(res.data));
     fetchChartData(symbol).then((res) => setChartData(res.data));
     fetchAutoTradeDecisions(symbol).then(res => setDecisions(res.data));
     loadAutoTradeDecisions();
@@ -132,6 +139,12 @@ export default function StockDetail() {
 
     return () => stream.close();
   }, [symbol]);
+
+  // re-fetch signal when strategy changes
+  useEffect(() => {
+    if (!symbol || !selectedStrategyId) return;
+    fetchSignal(symbol, selectedStrategyId).then((res) => setSignal(res.data));
+  }, [symbol, selectedStrategyId]);
 
   if (!symbol) {
     return <p className="p-6 text-slate-500">No stock selected.</p>;
@@ -160,7 +173,7 @@ export default function StockDetail() {
       setMessage("⏹️ Please place your order when the market is open.");
       return;
     }
-    const res = await paperAutoTrade(symbol);
+    const res = await paperAutoTrade(symbol, selectedStrategyId);
     setMessage(res.data.action);
     await loadAutoTradeDecisions();
   };
@@ -185,11 +198,28 @@ export default function StockDetail() {
       )}
 
       {signal && (
-        <SignalCard
-          signal={signal.signal}
-          confidence={signal.confidence}
-          reason={signal.reason}
-        />
+        <div className="flex flex-col gap-4">
+          <div className="trading-card !py-3 !px-4">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 block">Active Strategy</label>
+            <select 
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              value={selectedStrategyId}
+              onChange={(e) => setSelectedStrategyId(e.target.value)}
+            >
+              {strategies.map((strat: any) => (
+                <option key={strat.id} value={strat.id}>
+                  {strat.name} (Win Rate: {strat.expected_win_rate})
+                </option>
+              ))}
+            </select>
+          </div>
+          <SignalCard
+            signal={signal.signal}
+            confidence={signal.confidence}
+            reason={signal.reason}
+            strategyName={signal.strategy_used}
+          />
+        </div>
       )}
 
       <div className="trading-card col-span-1 md:col-span-2">

@@ -49,8 +49,13 @@ export const createSession = () => {
 export const fetchStock = (symbol: string) =>
   API.get(`/stock/${symbol}`);
 
-export const fetchSignal = (symbol: string) =>
-  API.get(`/signal/${symbol}`);
+export const fetchStrategies = () =>
+  API.get(`/strategies`);
+
+export const fetchSignal = (symbol: string, strategyId?: string) =>
+  API.get(`/signal/${symbol}`, {
+    params: strategyId ? { strategy_id: strategyId } : undefined
+  });
 
 export const fetchChartData = (symbol: string) =>
   API.get(`/chart/${symbol}`);
@@ -65,8 +70,10 @@ export const paperSell = (symbol: string, quantity: number) =>
     params: { symbol, quantity }
   });
 
-export const paperAutoTrade = (symbol: string) =>
-  API.post(`/paper-trade/auto/${symbol}`);
+export const paperAutoTrade = (symbol: string, strategyId?: string) =>
+  API.post(`/paper-trade/auto/${symbol}`, null, {
+    params: strategyId ? { strategy_id: strategyId } : undefined
+  });
 
 export const fetchPortfolio = () =>
   API.get(`/paper-trade/portfolio`);
