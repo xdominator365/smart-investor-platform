@@ -117,6 +117,8 @@ def create_session(
         .first()
     )
 
+    from sqlalchemy.exc import IntegrityError
+    
     # 2. Create user if this is a new visitor
     if not user:
         user = User(
@@ -125,9 +127,13 @@ def create_session(
             name="Guest User"
         )
 
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        try:
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        except IntegrityError:
+            db.rollback()
+            user = db.query(User).filter(User.guest_id == guest_id).first()
 
     # 3. Find this user's portfolio
     portfolio = (
@@ -144,9 +150,13 @@ def create_session(
             cash_balance=5000000.0
         )
 
-        db.add(portfolio)
-        db.commit()
-        db.refresh(portfolio)
+        try:
+            db.add(portfolio)
+            db.commit()
+            db.refresh(portfolio)
+        except IntegrityError:
+            db.rollback()
+            portfolio = db.query(Portfolio).filter(Portfolio.user_id == user.id).first()
 
     return {
         "user_id": user.id,
