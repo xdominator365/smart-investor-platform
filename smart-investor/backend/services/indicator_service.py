@@ -8,6 +8,7 @@ class IndicatorService:
     def add_moving_averages(df: pd.DataFrame) -> pd.DataFrame:
         df["MA20"] = df["Close"].rolling(window=20).mean()
         df["MA50"] = df["Close"].rolling(window=50).mean()
+        df["MA200"] = df["Close"].rolling(window=200).mean()
         return df
 
     @staticmethod

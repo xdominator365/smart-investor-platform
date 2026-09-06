@@ -317,10 +317,22 @@ def stock(symbol: str):
         ) from exc
 
 
+from strategies.registry import StrategyRegistry
+
+@app.get("/strategies")
+def get_strategies():
+    """Returns a list of all available trading strategies and their descriptions."""
+    return {"strategies": StrategyRegistry.get_all_metadata()}
+
 @app.get("/signal/{symbol}")
-def signal(symbol: str, db: Session = Depends(get_db)):
+def signal(symbol: str, strategy_id: str = "trend_follower", db: Session = Depends(get_db)):
     if not symbol or len(symbol) < 2:
         raise HTTPException(status_code=400, detail="Invalid stock symbol")
+
+    try:
+        strategy_class = StrategyRegistry.get_strategy(strategy_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     try:
         df = MarketDataService.get_historical_data(symbol)
@@ -343,7 +355,8 @@ def signal(symbol: str, db: Session = Depends(get_db)):
             "status": "UNAVAILABLE",
             "message": "News insights are temporarily unavailable"
         }
-    signal_data = SignalService.generate_signal(df, news_insights)
+        
+    signal_data = strategy_class.generate_signal(df, news_insights)
     latest = df.iloc[-1]
 
     def optional_number(value):
@@ -351,6 +364,7 @@ def signal(symbol: str, db: Session = Depends(get_db)):
 
     return {
         "symbol": symbol.upper(),
+        "strategy_used": strategy_class.get_metadata()["name"],
         "current_price": optional_number(latest["Close"]),
         "ma_20": optional_number(latest["MA20"]),
         "ma_50": optional_number(latest["MA50"]),
@@ -425,11 +439,10 @@ def paper_sell(
 @app.post("/paper-trade/auto/{symbol}")
 def auto_trade(
     symbol: str,
-    quantity: int = 1,
+    strategy_id: str = "trend_follower",
     x_guest_id: str | None = Header(default=None),
     db: Session = Depends(get_db)
 ):
-
     portfolio = get_guest_portfolio(db, x_guest_id)
 
     if not is_market_open():
@@ -437,22 +450,24 @@ def auto_trade(
 
     symbol = symbol.upper()
     
+    try:
+        strategy_class = StrategyRegistry.get_strategy(strategy_id)
+    except ValueError as e:
+        return {"action": f"ERROR: {str(e)}"}
+        
+    risk_params = strategy_class.get_risk_parameters()
+    
     context = DecisionContextService.build(symbol, db=db)
     features = context["features"]
-    rules = context["rules"]
     df = context["df"]
-    snapshot = context["snapshot"]
 
     try:
         news_insights = NewsService.build_insight(db, symbol)
     except Exception as exc:
         print(f"[NEWS] Auto-trade continuing without news insights: {exc}")
-        news_insights = {
-            "status": "UNAVAILABLE",
-            "message": "News insights are temporarily unavailable"
-        }
+        news_insights = {"status": "UNAVAILABLE"}
 
-    signal_data = SignalService.generate_signal(df, news_insights)
+    signal_data = strategy_class.generate_signal(df, news_insights)
     signal = signal_data["signal"]
 
     stock = MarketDataService.get_latest_stock_data(symbol)
@@ -473,7 +488,7 @@ def auto_trade(
         should_exit, reason = evaluate_exit_conditions(
             entry_price=position.avg_price,
             current_price=price,
-            hard_stop_pct=-5.0
+            hard_stop_pct=risk_params["hard_stop_pct"]
         )
         if should_exit:
             stop_loss_hit = True
@@ -489,15 +504,11 @@ def auto_trade(
 
     # 2. NORMAL SIGNAL EVALUATION (only if stop-loss didn't trigger)
     if not stop_loss_hit:
-        if not rules["rules_passed"]:
-            action = f"BLOCKED BY RULES: {rules['blocked_by']}"
-
-        elif signal == "BUY":
-            # Dynamic position sizing instead of default quantity
+        if signal == "BUY":
             trade_qty = calculate_position_size(
                 cash_balance=portfolio.cash_balance, 
                 current_price=price, 
-                max_allocation_pct=0.10
+                max_allocation_pct=risk_params["max_allocation_pct"]
             )
             
             if trade_qty > 0:
@@ -507,11 +518,11 @@ def auto_trade(
                     symbol=symbol,
                     price=price,
                     quantity=trade_qty,
-                    strategy="auto"
+                    strategy=strategy_id
                 )
-                action = f"AUTO BUY EXECUTED ({trade_qty} shares)"
+                action = f"AUTO BUY EXECUTED ({trade_qty} shares via {strategy_id})"
             else:
-                action = "BLOCKED BY RISK: Insufficient capital for 10% max allocation"
+                action = "BLOCKED BY RISK: Insufficient capital for max allocation"
 
         elif signal == "SELL" and current_qty > 0:
             PaperTradeService.sell(
@@ -520,9 +531,9 @@ def auto_trade(
                 symbol=symbol,
                 price=price,
                 quantity=current_qty,
-                strategy="auto"
+                strategy=strategy_id
             )
-            action = "AUTO SELL EXECUTED"
+            action = f"AUTO SELL EXECUTED (via {strategy_id})"
 
     decision = AutoTradeDecision(
         symbol=symbol,
