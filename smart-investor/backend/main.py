@@ -465,30 +465,64 @@ def auto_trade(
     current_qty = position.quantity if position else 0
     action = "NO ACTION"
 
-    if not rules["rules_passed"]:
-        action = f"BLOCKED BY RULES: {rules['blocked_by']}"
-
-    elif signal == "BUY":
-        PaperTradeService.buy(
-            db=db,
-            portfolio_id=portfolio.id,
-            symbol=symbol,
-            price=price,
-            quantity=quantity,
-            strategy="auto"
+    # 1. RISK MANAGEMENT: Stop-Loss Evaluation
+    from rules.risk_management import evaluate_exit_conditions, calculate_position_size
+    stop_loss_hit = False
+    
+    if position:
+        should_exit, reason = evaluate_exit_conditions(
+            entry_price=position.avg_price,
+            current_price=price,
+            hard_stop_pct=-5.0
         )
-        action = "AUTO BUY EXECUTED"
+        if should_exit:
+            stop_loss_hit = True
+            PaperTradeService.sell(
+                db=db,
+                portfolio_id=portfolio.id,
+                symbol=symbol,
+                price=price,
+                quantity=current_qty,
+                strategy=f"stop-loss ({reason})"
+            )
+            action = f"STOP LOSS EXECUTED: {reason}"
 
-    elif signal == "SELL" and current_qty > 0:
-        PaperTradeService.sell(
-            db=db,
-            portfolio_id=portfolio.id,
-            symbol=symbol,
-            price=price,
-            quantity=current_qty,
-            strategy="auto"
-        )
-        action = "AUTO SELL EXECUTED"
+    # 2. NORMAL SIGNAL EVALUATION (only if stop-loss didn't trigger)
+    if not stop_loss_hit:
+        if not rules["rules_passed"]:
+            action = f"BLOCKED BY RULES: {rules['blocked_by']}"
+
+        elif signal == "BUY":
+            # Dynamic position sizing instead of default quantity
+            trade_qty = calculate_position_size(
+                cash_balance=portfolio.cash_balance, 
+                current_price=price, 
+                max_allocation_pct=0.10
+            )
+            
+            if trade_qty > 0:
+                PaperTradeService.buy(
+                    db=db,
+                    portfolio_id=portfolio.id,
+                    symbol=symbol,
+                    price=price,
+                    quantity=trade_qty,
+                    strategy="auto"
+                )
+                action = f"AUTO BUY EXECUTED ({trade_qty} shares)"
+            else:
+                action = "BLOCKED BY RISK: Insufficient capital for 10% max allocation"
+
+        elif signal == "SELL" and current_qty > 0:
+            PaperTradeService.sell(
+                db=db,
+                portfolio_id=portfolio.id,
+                symbol=symbol,
+                price=price,
+                quantity=current_qty,
+                strategy="auto"
+            )
+            action = "AUTO SELL EXECUTED"
 
     decision = AutoTradeDecision(
         symbol=symbol,
