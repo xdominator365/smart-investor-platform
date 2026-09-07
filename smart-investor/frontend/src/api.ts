@@ -1,10 +1,10 @@
 import axios from "axios";
 
 // Local development → FastAPI directly
-// Production → Vercel proxies /api requests to Render
+// Production → Direct Render URL (bypasses Vercel proxy to prevent 429 Too Many Requests)
 const API_URL = import.meta.env.DEV
   ? import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
-  : "/api";
+  : "https://smart-investor-platform-kmsq.onrender.com";
 
 const API = axios.create({
   baseURL: API_URL,

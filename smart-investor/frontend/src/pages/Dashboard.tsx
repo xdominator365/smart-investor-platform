@@ -57,13 +57,22 @@ export default function Dashboard() {
     };
   }, [portfolio, prices]);
 
+  const [error, setError] = useState<string | null>(null);
+
   // Load portfolio and bot data on initial render
   useEffect(() => {
-    fetchPortfolio().then((res) => setPortfolio(res.data));
-    fetchStrategies().then((res) => setStrategies(res.data.strategies));
-    fetchBotStatus().then((res) => {
-      setIsBotEnabled(res.data.is_bot_enabled);
-      setBotStrategyId(res.data.bot_strategy_id);
+    Promise.all([
+      fetchPortfolio(),
+      fetchStrategies(),
+      fetchBotStatus()
+    ]).then(([portRes, stratRes, botRes]) => {
+      setPortfolio(portRes.data);
+      setStrategies(stratRes.data.strategies);
+      setIsBotEnabled(botRes.data.is_bot_enabled);
+      setBotStrategyId(botRes.data.bot_strategy_id);
+    }).catch((err) => {
+      console.error("Dashboard load failed", err);
+      setError("Failed to load your portfolio. The server might be unreachable or rate limited (429). Please try refreshing.");
     });
   }, []);
 
@@ -161,6 +170,16 @@ export default function Dashboard() {
       clearInterval(interval);
     };
   }, [portfolio, marketOpen]);
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4 text-red-500">
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   // Show loading state until portfolio loads
   if (!portfolio) {
