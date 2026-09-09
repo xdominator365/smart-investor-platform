@@ -52,6 +52,26 @@ class ZerodhaOrderPreviewRequest(BaseModel):
     quantity: int
     reference_price: float
 
+@app.get("/api/admin/migrate")
+def admin_run_migrations(db: Session = Depends(get_db)):
+    """Temporary endpoint to migrate the production database schema."""
+    from sqlalchemy import text
+    try:
+        db.execute(text("ALTER TABLE portfolios ADD COLUMN is_bot_enabled BOOLEAN DEFAULT false;"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Migration 1 skipped or failed: {e}")
+        
+    try:
+        db.execute(text("ALTER TABLE portfolios ADD COLUMN bot_strategy_id VARCHAR(50);"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Migration 2 skipped or failed: {e}")
+        
+    return {"status": "Migration execution completed"}
+
 
 class ZerodhaOrderRequest(BaseModel):
     preview_id: str
